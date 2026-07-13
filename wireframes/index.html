@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sequential Reading Program - Mobile Wireframes</title>
+  <style>
+    :root {
+      --ink: #24272b;
+      --muted: #6b727a;
+      --line: #9ca3aa;
+      --soft: #eef0f2;
+      --paper: #ffffff;
+      --canvas: #e4e7ea;
+      --accent: #2f70b7;
+      --accent-soft: #dceaf8;
+      --good: #315f49;
+      --warn: #705e34;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.35;
+    }
+
+    button, a { font: inherit; }
+
+    .page-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(8px);
+    }
+
+    .page-header__inner {
+      max-width: 1260px;
+      margin: auto;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .page-header h1 {
+      margin: 0;
+      font-size: clamp(20px, 2.6vw, 32px);
+      letter-spacing: -.02em;
+    }
+
+    .page-header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .header-links { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .header-links a,
+    .nav-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 7px 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      background: var(--paper);
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .header-links a:hover,
+    .nav-chip:hover { border-color: var(--ink); }
+
+    main {
+      max-width: 1260px;
+      margin: auto;
+      padding: 28px 24px 64px;
+    }
+
+    .summary {
+      margin-bottom: 28px;
+      padding: 18px 20px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--accent);
+      border-radius: 10px;
+      background: var(--paper);
+    }
+
+    .summary strong { display: block; margin-bottom: 5px; }
+    .summary p { margin: 0; color: var(--muted); }
+
+    .screen-nav {
+      margin-bottom: 26px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .section-heading {
+      margin: 44px 0 20px;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .section-heading h2 { margin: 0; font-size: 25px; }
+    .section-heading p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .phone-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(300px, 1fr));
+      gap: 32px 26px;
+      align-items: start;
+    }
+
+    .screen-wrap { margin: 0; }
+
+    .screen-label {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .phone {
+      width: min(100%, 390px);
+      min-height: 760px;
+      margin: 0 auto;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 2px solid var(--ink);
+      border-radius: 28px;
+      background: var(--paper);
+      box-shadow: 0 12px 28px rgba(24,28,32,.12);
+    }
+
+    .device-top {
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f7f8f9;
+    }
+
+    .speaker { width: 64px; height: 5px; border-radius: 5px; background: #71767b; }
+
+    .appbar {
+      min-height: 66px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: #f8f9fa;
+    }
+
+    .appbar__title { font-size: 15px; font-weight: 800; }
+    .appbar__eyebrow { color: var(--muted); font-size: 11px; }
+    .appbar__tools { display: flex; gap: 6px; }
+
+    .icon-button {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .lesson-progress { height: 7px; background: var(--soft); }
+    .lesson-progress span { display: block; width: var(--p); height: 100%; background: var(--accent); }
+
+    .screen-body {
+      flex: 1;
+      padding: 24px 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      gap: 18px;
+    }
+
+    .screen-body h3 { margin: 0; text-align: center; font-size: 22px; }
+    .screen-body p { margin: 0; }
+    .instruction { text-align: center; color: #3e4348; font-size: 17px; }
+    .helper { color: var(--muted); text-align: center; font-size: 13px; }
+
+    .action-bar {
+      padding: 15px 18px 18px;
+      border-top: 1px solid var(--line);
+      background: #fafbfb;
+    }
+
+    .primary-button,
+    .secondary-button {
+      width: 100%;
+      min-height: 52px;
+      border: 2px solid var(--ink);
+      border-radius: 10px;
+      background: var(--ink);
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: .03em;
+    }
+
+    .secondary-button { background: var(--paper); color: var(--ink); }
+
+    .device-home {
+      width: 90px;
+      height: 5px;
+      margin: 0 auto 10px;
+      border-radius: 5px;
+      background: #7a8086;
+    }
+
+    .hero-icon {
+      width: 118px;
+      height: 118px;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      border: 3px dashed var(--line);
+      border-radius: 50%;
+      color: var(--muted);
+      font-size: 56px;
+    }
+
+    .word-card {
+      min-height: 164px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      background: #fafafa;
+      font-size: 62px;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+
+    .dot-row { display: flex; justify-content: center; gap: 8px; }
+    .dot { width: 10px; height: 10px; border: 1px solid var(--ink); border-radius: 50%; }
+    .dot.active { background: var(--ink); }
+
+    .word-row,
+    .word-grid,
+    .tile-row,
+    .choice-row,
+    .reward-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .word,
+    .tile,
+    .choice,
+    .reward {
+      min-width: 74px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #f6f7f8;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 750;
+    }
+
+    .pattern { color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 0 2px; }
+
+    .mic {
+      width: 78px;
+      height: 78px;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      border: 3px solid var(--accent);
+      border-radius: 50%;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    .countdown { display: flex; justify-content: center; gap: 10px; }
+    .countdown span { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; }
+    .countdown span:first-child { border-color: var(--accent); background: var(--accent-soft); }
+
+    .build-zone {
+      padding: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      border: 2px dashed var(--line);
+      border-radius: 12px;
+      font-size: 40px;
+      font-weight: 800;
+    }
+
+    .empty-slot { width: 55px; height: 55px; border: 2px solid var(--ink); border-radius: 8px; }
+
+    .status-line { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; }
+
+    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric { padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #f8f9fa; }
+    .metric span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+    .metric strong { font-size: 22px; }
+
+    .sentence-list,
+    .story-card {
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fafafa;
+    }
+
+    .sentence-list p { padding: 10px 0; border-bottom: 1px dashed #c5c9cd; font-size: 17px; }
+    .sentence-list p:last-child { border: 0; }
+    .story-card h4 { margin: 0 0 12px; font-size: 19px; }
+    .story-card p { margin: 9px 0; font-size: 17px; }
+
+    .control-row { display: flex; gap: 8px; }
+    .control-row button { flex: 1; min-height: 42px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+
+    .spelling-slots { display: flex; justify-content: center; gap: 12px; }
+    .spelling-slot { width: 62px; height: 68px; display: grid; place-items: center; border: 2px solid var(--ink); border-radius: 8px; font-size: 34px; }
+
+    .hunt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .hunt-word { padding: 13px 6px; border: 1px solid var(--line); border-radius: 8px; background: #f7f8f8; text-align: center; font-size: 19px; }
+    .hunt-word.hit { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 800; }
+
+    .mastery-word { padding: 28px; border: 3px solid var(--ink); border-radius: 12px; text-align: center; font-size: 60px; font-weight: 850; }
+    .mastery-note { padding: 10px 12px; border-left: 4px solid var(--warn); background: #f5f2e9; color: #4c462f; font-size: 13px; }
+
+    .confetti {
+      height: 72px;
+      background:
+        linear-gradient(25deg, transparent 45%, #899097 46% 54%, transparent 55%) 0 0/42px 34px,
+        linear-gradient(-25deg, transparent 45%, #c1c6ca 46% 54%, transparent 55%) 12px 7px/52px 42px;
+      opacity: .75;
+    }
+
+    .badge {
+      width: 132px;
+      height: 132px;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      border: 4px double var(--ink);
+      border-radius: 50%;
+      background: #f3f4f5;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .reward { min-width: 96px; font-size: 15px; }
+
+    .desktop-section { margin-top: 58px; }
+
+    .desktop-frame {
+      overflow: hidden;
+      border: 2px solid var(--ink);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: 0 14px 36px rgba(24,28,32,.14);
+    }
+
+    .desktop-browser-bar {
+      height: 42px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--line);
+      background: #f1f3f4;
+    }
+
+    .browser-dot { width: 11px; height: 11px; border: 1px solid var(--line); border-radius: 50%; background: #fff; }
+
+    .desktop-appbar {
+      height: 74px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand-lockup strong { display: block; font-size: 20px; }
+    .brand-lockup span { color: var(--muted); font-size: 12px; }
+
+    .learner-pill { padding: 10px 14px; border: 1px solid var(--line); border-radius: 20px; background: #f7f8f8; }
+
+    .desktop-layout {
+      min-height: 720px;
+      display: grid;
+      grid-template-columns: 230px minmax(440px, 1fr) 260px;
+    }
+
+    .desktop-sidebar,
+    .desktop-rail { padding: 22px; background: #f7f8f9; }
+    .desktop-sidebar { border-right: 1px solid var(--line); }
+    .desktop-rail { border-left: 1px solid var(--line); }
+    .desktop-sidebar h3,
+    .desktop-rail h3 { margin: 0 0 14px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; }
+
+    .step-list { margin: 0; padding: 0; list-style: none; }
+    .step-list li { padding: 9px 10px; border-left: 2px solid transparent; color: var(--muted); font-size: 13px; }
+    .step-list li.active { border-left-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 800; }
+
+    .desktop-main { padding: 34px; display: flex; flex-direction: column; gap: 20px; }
+
+    .desktop-progress { display: flex; align-items: center; gap: 14px; }
+    .desktop-progress .lesson-progress { flex: 1; border-radius: 6px; overflow: hidden; }
+
+    .desktop-lesson-card {
+      flex: 1;
+      padding: 34px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 24px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .desktop-lesson-card h2 { margin: 0; text-align: center; font-size: 30px; }
+    .desktop-lesson-card .word { min-width: 130px; padding: 20px; font-size: 34px; }
+
+    .rail-card { margin-bottom: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+    .rail-card span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+    .rail-card strong { font-size: 20px; }
+
+    .tutor-note { padding: 14px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 13px; }
+
+    .implementation-notes {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .note-card { padding: 15px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); }
+    .note-card strong { display: block; margin-bottom: 6px; }
+    .note-card p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 980px) {
+      .phone-grid { grid-template-columns: repeat(2, minmax(300px, 1fr)); }
+      .desktop-layout { grid-template-columns: 190px 1fr; }
+      .desktop-rail { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; border-left: 0; border-top: 1px solid var(--line); }
+      .implementation-notes { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 680px) {
+      .page-header { position: static; }
+      .page-header__inner { align-items: flex-start; flex-direction: column; }
+      main { padding-inline: 14px; }
+      .phone-grid { grid-template-columns: 1fr; }
+      .desktop-frame { overflow-x: auto; }
+      .desktop-layout { min-width: 960px; }
+      .desktop-appbar { min-width: 960px; }
+      .implementation-notes { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page-header { position: static; }
+      .phone-grid { grid-template-columns: repeat(2, 1fr); }
+      .phone { break-inside: avoid; box-shadow: none; }
+      .desktop-section { break-before: page; }
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <div class="page-header__inner">
+      <div>
+        <h1>Sequential Reading Program Wireframes</h1>
+        <p>Developer Notebook 070626 · 15 mobile lesson screens</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="summary">
+      <strong>Mobile-first target: 390 × 844 logical pixels</strong>
+      <p>Every instructional screen includes a large-touch replay control, closed-caption control, visible lesson progress, encouraging language, and one primary action.</p>
+    </section>
+
+    <nav class="screen-nav" aria-label="Jump to a wireframe">
+      <a class="nav-chip" href="#screen-1">01</a><a class="nav-chip" href="#screen-2">02</a><a class="nav-chip" href="#screen-3">03</a>
+      <a class="nav-chip" href="#screen-4">04</a><a class="nav-chip" href="#screen-5">05</a><a class="nav-chip" href="#screen-6">06</a>
+      <a class="nav-chip" href="#screen-7">07</a><a class="nav-chip" href="#screen-8">08</a><a class="nav-chip" href="#screen-9">09</a>
+      <a class="nav-chip" href="#screen-10">10</a><a class="nav-chip" href="#screen-11">11</a><a class="nav-chip" href="#screen-12">12</a>
+      <a class="nav-chip" href="#screen-13">13</a><a class="nav-chip" href="#screen-14">14</a><a class="nav-chip" href="#screen-15">15</a>
+    </nav>
+
+    <div class="section-heading">
+      <div><h2>Mobile lesson flow</h2><p>Discovery-first -ip word-family lesson</p></div>
+      <p>I Do → You Notice → We Name It → You Practice → You Apply → You Master</p>
+    </div>
+
+    <section class="phone-grid" aria-label="Fifteen mobile wireframes">
+      <figure class="screen-wrap" id="screen-1">
+        <figcaption class="screen-label">Screen 01 · Welcome</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 1 of 15</div><div class="appbar__title">Pattern Detective</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:6.7%"><span></span></div>
+          <div class="screen-body">
+            <div class="hero-icon" aria-label="Magnifying glass placeholder">⌕</div>
+            <h3>Welcome back!</h3>
+            <p class="instruction">Today we’re going to be Pattern Detectives.</p>
+            <p class="helper">Magnifying glass appears · stars sparkle</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">START</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-2">
+        <figcaption class="screen-label">Screen 02 · Listen and Look</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 2 of 15</div><div class="appbar__title">Listen and Look</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:13.3%"><span></span></div>
+          <div class="screen-body">
+            <p class="instruction">Listen carefully.</p>
+            <div class="word-card">sip</div>
+            <div class="dot-row"><span class="dot active"></span><span class="dot"></span><span class="dot"></span></div>
+            <p class="helper">One word at a time · spoken automatically · 1-second pause · then lip and rip</p>
+          </div>
+          <div class="action-bar"><button class="secondary-button">REPLAY WORD</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-3">
+        <figcaption class="screen-label">Screen 03 · Discovery Question</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 3 of 15</div><div class="appbar__title">Discovery Question</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:20%"><span></span></div>
+          <div class="screen-body">
+            <div class="word-row"><div class="word">sip</div><div class="word">lip</div><div class="word">rip</div></div>
+            <h3>What do these words have in common?</h3>
+            <div class="mic">MIC</div>
+            <div class="countdown"><span>3</span><span>2</span><span>1</span></div>
+            <p class="helper">The student may say it, tap letters, or simply think. Continue after three seconds with no penalty.</p>
+          </div>
+          <div class="action-bar"><button class="secondary-button">CONTINUES AUTOMATICALLY</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-4">
+        <figcaption class="screen-label">Screen 04 · Pattern Reveal</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 4 of 15</div><div class="appbar__title">Pattern Reveal</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:26.7%"><span></span></div>
+          <div class="screen-body">
+            <div class="word-row"><div class="word">s<span class="pattern">ip</span></div><div class="word">l<span class="pattern">ip</span></div><div class="word">r<span class="pattern">ip</span></div></div>
+            <h3>These words all end with <span class="pattern">-ip</span>.</h3>
+            <p class="instruction">The letters <strong>i</strong> and <strong>p</strong> make the -ip pattern.</p>
+            <p class="helper">Bright-blue synchronized highlight · glow · sparkle</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">CONTINUE</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-5">
+        <figcaption class="screen-label">Screen 05 · More Examples</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 5 of 15</div><div class="appbar__title">More Examples</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:33.3%"><span></span></div>
+          <div class="screen-body">
+            <div class="word-row"><div class="word">dip</div><div class="word">tip</div><div class="word">zip</div></div>
+            <h3>What part stays the same?</h3>
+            <div class="choice-row"><div class="choice">i</div><div class="choice">p</div><div class="choice pattern">ip</div></div>
+            <p class="helper">Correct: star + encouragement · Incorrect: “Try again.”</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">CHECK ANSWER</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-6">
+        <figcaption class="screen-label">Screen 06 · Build the Pattern</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 6 of 15</div><div class="appbar__title">Build the Pattern</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:40%"><span></span></div>
+          <div class="screen-body">
+            <div class="build-zone"><span class="empty-slot"></span><span>ip</span></div>
+            <div class="tile-row"><div class="tile">s</div><div class="tile">d</div><div class="tile">l</div><div class="tile">r</div><div class="tile">t</div><div class="tile">z</div></div>
+            <p class="instruction">Drag a beginning letter into the box.</p>
+            <p class="helper">Every consonant snaps into place · resulting word is read aloud · success sound</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">BUILD WORD</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-7">
+        <figcaption class="screen-label">Screen 07 · Read the Words</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 7 of 15</div><div class="appbar__title">Read the Words</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:46.7%"><span></span></div>
+          <div class="screen-body">
+            <div class="word-grid"><div class="word">zip</div><div class="word">sip</div><div class="word">tip</div><div class="word">dip</div><div class="word">lip</div><div class="word">rip</div></div>
+            <p class="instruction">Read each word aloud.</p>
+            <div class="mic">MIC</div>
+            <p class="helper">Correct: green check + star · Retry: “Let’s try that one again.” · Optional “Tap sounds” tutor support</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">NEXT WORD</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-8">
+        <figcaption class="screen-label">Screen 08 · Build Fluency</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 8 of 15</div><div class="appbar__title">Build Fluency</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:53.3%"><span></span></div>
+          <div class="screen-body">
+            <p class="instruction">Read these as smoothly as you can.</p>
+            <div class="word-row"><div class="word">sip</div><span>→</span><div class="word">tip</div><span>→</span><div class="word">dip</div></div>
+            <div class="word-row"><div class="word">lip</div><span>→</span><div class="word">rip</div><span>→</span><div class="word">zip</div></div>
+            <div class="metric-grid"><div class="metric"><span>Accuracy</span><strong>--%</strong></div><div class="metric"><span>Words/min</span><strong>--</strong></div></div>
+          </div>
+          <div class="action-bar"><button class="primary-button">START TIMER</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-9">
+        <figcaption class="screen-label">Screen 09 · Read Sentences</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 9 of 15</div><div class="appbar__title">Read Sentences</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:60%"><span></span></div>
+          <div class="screen-body">
+            <div class="sentence-list"><p>The pig can sip.</p><p>Zip the bag.</p><p>Do not rip the paper.</p><p>The bird will dip into the pond.</p></div>
+            <p class="helper">Computer models once. Student rereads independently.</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">I READ THEM</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-10">
+        <figcaption class="screen-label">Screen 10 · Story</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 10 of 15</div><div class="appbar__title">Story</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:66.7%"><span></span></div>
+          <div class="screen-body">
+            <div class="story-card"><h4>Pip Can Zip</h4><p>Pip can sip.</p><p>Pip can dip.</p><p>Pip can zip his bag.</p><p>Pip did not rip it.</p></div>
+            <div class="control-row"><button>Read to Me</button><button>Highlight Words</button></div>
+            <p class="helper">Student reads independently after modeled reading.</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">I READ THE STORY</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-11">
+        <figcaption class="screen-label">Screen 11 · Spelling</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 11 of 15</div><div class="appbar__title">Spelling</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:73.3%"><span></span></div>
+          <div class="screen-body">
+            <h3>Spell “sip.”</h3>
+            <div class="spelling-slots"><div class="spelling-slot"></div><div class="spelling-slot"></div><div class="spelling-slot"></div></div>
+            <div class="tile-row"><div class="tile">s</div><div class="tile">i</div><div class="tile">p</div></div>
+            <p class="helper">Correct: star · then lip, rip, dip, tip, and zip</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">CHECK SPELLING</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-12">
+        <figcaption class="screen-label">Screen 12 · Pattern Hunt</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 12 of 15</div><div class="appbar__title">Pattern Hunt</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:80%"><span></span></div>
+          <div class="screen-body">
+            <h3>Find all the -ip words.</h3>
+            <div class="hunt-grid"><div class="hunt-word">cat</div><div class="hunt-word hit">sip</div><div class="hunt-word">dog</div><div class="hunt-word hit">tip</div><div class="hunt-word">map</div><div class="hunt-word hit">lip</div><div class="hunt-word">sun</div><div class="hunt-word hit">rip</div><div class="hunt-word">fan</div><div class="hunt-word hit">zip</div></div>
+            <p class="helper">Correct word earns a star, then disappears.</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">DONE HUNTING</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-13">
+        <figcaption class="screen-label">Screen 13 · Challenge</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson 13 of 15</div><div class="appbar__title">Challenge</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:86.7%"><span></span></div>
+          <div class="screen-body">
+            <p class="instruction">You already know -ip. Can you read these bigger words?</p>
+            <div class="word-grid"><div class="word">chip</div><div class="word">trip</div><div class="word">slip</div><div class="word">grip</div><div class="word">drip</div></div>
+            <div class="mic">MIC</div>
+            <p class="helper">Transfer of learning: same pattern, more complex onsets.</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">START CHALLENGE</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-14">
+        <figcaption class="screen-label">Screen 14 · Mastery Check</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Word 4 of 10</div><div class="appbar__title">Mastery Check</div></div><div class="appbar__tools"><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:93.3%"><span></span></div>
+          <div class="screen-body">
+            <div class="mastery-note">Independent check: no hints, modeled reading, or corrective help.</div>
+            <div class="mastery-word">rip</div>
+            <div class="mic">MIC</div>
+            <div class="metric-grid"><div class="metric"><span>Accuracy</span><strong>--%</strong></div><div class="metric"><span>Time</span><strong>--</strong></div></div>
+            <p class="helper">Record accuracy, time, and attempts. 90% unlocks the next lesson; below 90% assigns review.</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">SUBMIT WORD</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+
+      <figure class="screen-wrap" id="screen-15">
+        <figcaption class="screen-label">Screen 15 · Celebration</figcaption>
+        <article class="phone">
+          <div class="device-top"><span class="speaker"></span></div>
+          <header class="appbar"><div><div class="appbar__eyebrow">Lesson complete</div><div class="appbar__title">Celebration</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <div class="lesson-progress" style="--p:100%"><span></span></div>
+          <div class="screen-body">
+            <div class="confetti" aria-hidden="true"></div>
+            <h3>Fantastic!</h3>
+            <p class="instruction">You discovered the -ip pattern!</p>
+            <div class="badge">Pattern<br>Detective<br>Badge</div>
+            <div class="reward-row"><div class="reward">★ 10 Stars</div><div class="reward">+ Coins</div></div>
+            <p class="helper">Progress saved automatically.</p>
+          </div>
+          <div class="action-bar"><button class="primary-button">NEXT LESSON</button></div><div class="device-home"></div>
+        </article>
+      </figure>
+    </section>
+
+  </main>
+</body>
+</html>
+
+
