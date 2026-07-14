@@ -14,6 +14,7 @@ function ending(){return lesson().pattern.slice(1)}
 function onset(word){return word.slice(0,-ending().length).toLowerCase()}
 const FEMALE_NARRATOR_PRIORITIES=['Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)','Microsoft Ava Online (Natural)','Microsoft Emma Multilingual Online (Natural)','Microsoft Aria','Microsoft Jenny','Microsoft Ava','Microsoft Emma','Google UK English Female','Google US English','Samantha','Ava','Emma','Allison','Zira','Victoria','Karen','Moira','Tessa','Fiona','Libby','Sonia','Hazel','Susan','Serena','Kate','Veena','Joanna','Kendra','Kimberly','Ivy','Salli'];
 let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer=null;
+const SCREEN_ONE_NARRATION='Welcome Pattern Detective. Your next case is ready for you to solve.';
 function chooseNarratorVoice(voices){
   const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
   if(!english.length)return null;
@@ -50,6 +51,12 @@ function speak(text,rate=.78){
   u.onend=u.onerror=()=>{if(activeNarration===u)activeNarration=null};
   speechSynthesis.speak(u);
 }
+function stopNarration(){
+  pendingNarration=null;
+  activeNarration=null;
+  clearTimeout(voiceWaitTimer);
+  if('speechSynthesis'in window)speechSynthesis.cancel();
+}
 if('speechSynthesis'in window){refreshNarratorVoice();speechSynthesis.addEventListener('voiceschanged',refreshNarratorVoice)}
 function toast(text){const t=document.createElement('div');t.className='toast';t.textContent=text;document.body.append(t);setTimeout(()=>t.remove(),1800)}
 function header(){return `<header class="topbar"><button class="brand" data-view="home" aria-label="Detective Reader home"><span class="glass"></span><span>Detective Reader<small>solve every word</small></span></button><div class="topstats"><span class="pill">${AVATARS[state.avatar][0]} ${AVATARS[state.avatar][1]}</span><button class="pill coin" data-view="rewards">🪙 ${state.coins}</button></div></header>`}
@@ -71,9 +78,10 @@ function renderProgress(){const accuracy=state.completed.length?'92%':'—';retu
 const screenNames=['Welcome','Listen and Look','Discovery Question','Pattern Reveal','More Examples','Build the Pattern','Read the Words','Build Fluency','Read Sentences','Story','Spelling','Pattern Hunt','Challenge','Mastery Check','Celebration'];
 function lessonFrame(body){const current=state.screen==='sound'?4:state.screen;return `<main class="main lessonShell"><div class="lessonHead"><button class="secondary" data-exit>← Exit case</button><span class="pill">Case ${state.lesson+1}: ${lesson().pattern}</span><button class="secondary" data-replay>🔊 Replay</button></div><div class="progress"><span style="width:${Math.min(100,current/15*100)}%"></span></div><section class="screenCard ${state.screen===15?'celebrate':''}">${body}</section></main>`}
 function nextButton(next,label='Continue'){return `<div class="footerActions"><button class="primary" data-next="${next}">${label} →</button></div>`}
+function startCasePrompt(){return `<div class="footerActions startCasePrompt"><span class="startCaseArrow" aria-hidden="true">➜</span><button class="primary startCaseButton" data-next="2">Start the Case</button></div>`}
 function wordCards(words,highlight=false){return `<div class="wordRow">${words.map(w=>{if(!highlight)return`<div class="word">${w}</div>`;const e=ending(),o=w.slice(0,-e.length);return`<div class="word">${o}<mark>${e}</mark></div>`}).join('')}</div>`}
 function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="screenTag">SCREEN ${n} OF 15 · ${screenNames[n-1]}</span>`;
-  if(s===1)return lessonFrame(`${tag(1)}<div class="bigReward">🕵️</div><h1>Welcome, Pattern Detective!</h1><p>Your next case is the <strong>${l.pattern}</strong> word family.</p>${nextButton(2,'Start the case')}`);
+  if(s===1)return lessonFrame(`${tag(1)}<div class="bigReward">🕵️</div><h1>Welcome, Pattern Detective!</h1><p>Your next case is the <strong>${l.pattern}</strong> word family.</p>${startCasePrompt()}`);
   if(s===2)return lessonFrame(`${tag(2)}<h1>Listen carefully.</h1>${wordCards(l.words)}<p class="clue">The words appear one at a time in production, with a one-second pause.</p><div class="footerActions"><button class="secondary" data-speak="${l.words.join('. ')}">🔊 Hear the words</button><button class="primary" data-next="3">I listened →</button></div>`);
   if(s===3)return lessonFrame(`${tag(3)}<h1>What do these words have in common?</h1>${wordCards(l.words)}<div class="timer"><b>3</b><span>Think or say your answer. No penalty.</span></div>${nextButton(4,'Reveal the clue')}`);
   if(s===4)return lessonFrame(`${tag(4)}<h1>They all end with <mark>${l.pattern}</mark>.</h1>${wordCards(l.words,true)}<p class="clue">The beginning changes. The ${l.pattern} rime stays the same.</p>${nextButton('sound','Open the Sound Lab')}`);
@@ -95,13 +103,13 @@ function soundWords(){const l=lesson();return l.pattern==='-it'?['sit','pit','fi
 function renderSoundLab(){const ws=soundWords(),from=ws[state.soundDrill%ws.length],to=ws[(state.soundDrill+1)%ws.length];return `<span class="screenTag">BONUS SOUND LAB · DRILL ${state.soundDrill+1} OF 5</span><h1>Change the first sound</h1><p>Keep the <strong>${lesson().pattern}</strong> rime.</p><div class="soundLab"><p>Say <strong>${from}</strong>. Then say ${from}, but instead of</p><div class="swap">/${onset(from)}/ → /${onset(to)}/</div><div class="timer"><b>3</b><span>Your turn: say the new word.</span></div><div class="word">${to}</div></div><button class="primary" data-soundnext>${state.soundDrill===4?'Continue to Screen 5':'Next sound drill'}</button>`}
 
 function bind(){
-  document.querySelectorAll('[data-view]').forEach(x=>x.onclick=()=>{state.view=x.dataset.view;render()});
-  document.querySelectorAll('[data-start]').forEach(x=>x.onclick=()=>{state.view='lesson';state.screen=1;resetLesson();render()});
-  document.querySelectorAll('[data-lesson]').forEach(x=>x.onclick=()=>{state.lesson=+x.dataset.lesson;state.view='lesson';state.screen=1;resetLesson();save();render()});
-  document.querySelectorAll('[data-exit]').forEach(x=>x.onclick=()=>{state.view='home';render()});
-  document.querySelectorAll('[data-next]').forEach(x=>x.onclick=()=>{state.screen=x.dataset.next==='sound'?'sound':+x.dataset.next;render()});
+  document.querySelectorAll('[data-view]').forEach(x=>x.onclick=()=>{stopNarration();state.view=x.dataset.view;render()});
+  document.querySelectorAll('[data-start]').forEach(x=>x.onclick=()=>{stopNarration();state.view='lesson';state.screen=1;resetLesson();render();speak(SCREEN_ONE_NARRATION)});
+  document.querySelectorAll('[data-lesson]').forEach(x=>x.onclick=()=>{stopNarration();state.lesson=+x.dataset.lesson;state.view='lesson';state.screen=1;resetLesson();save();render();speak(SCREEN_ONE_NARRATION)});
+  document.querySelectorAll('[data-exit]').forEach(x=>x.onclick=()=>{stopNarration();state.view='home';render()});
+  document.querySelectorAll('[data-next]').forEach(x=>x.onclick=()=>{stopNarration();state.screen=x.dataset.next==='sound'?'sound':+x.dataset.next;render()});
   document.querySelectorAll('[data-speak]').forEach(x=>x.onclick=()=>speak(x.dataset.speak));
-  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>speak(`Screen ${state.screen}. Follow the clue.`));
+  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`));
   document.querySelectorAll('[data-correct]').forEach(x=>x.onclick=()=>{toast('Correct clue! ⭐');setTimeout(()=>{state.screen=6;render()},500)});
   document.querySelectorAll('[data-wrong]').forEach(x=>x.onclick=()=>toast('Look at the ending and try again.'));
   document.querySelectorAll('[data-build]').forEach(x=>x.onclick=()=>{toast(`${lesson().words[+x.dataset.build]} — clue built!`) });
