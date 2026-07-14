@@ -113,3 +113,7 @@ h1,h2,h3,p{margin-top:0}
   .hero h1{font-size:31px}
   .word{min-width:95px;padding:18px;font-size:30px}
 }
+@media(max-width:380px){
+  .lessonHead .secondary{padding:0 10px}
+  .lessonHead .pill{padding:9px 8px;font-size:12px}
+}
