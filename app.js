@@ -14,10 +14,14 @@ function ending(){return lesson().pattern.slice(1)}
 function onset(word){return word.slice(0,-ending().length).toLowerCase()}
 const FEMALE_NARRATOR_PRIORITIES=['Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)','Microsoft Ava Online (Natural)','Microsoft Emma Multilingual Online (Natural)','Microsoft Aria','Microsoft Jenny','Microsoft Ava','Microsoft Emma','Google UK English Female','Google US English','Samantha','Ava','Emma','Allison','Zira','Victoria','Karen','Moira','Tessa','Fiona','Libby','Sonia','Hazel','Susan','Serena','Kate','Veena','Joanna','Kendra','Kimberly','Ivy','Salli'];
 let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer=null,activeNarrationTimer=null,narratorUnavailable=false;
-let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null;
+let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null,screenFourRun=0,screenFourTimer=null,screenFourRoot=null;
 const SCREEN_ONE_NARRATION='Welcome Pattern Detective. Your next case is ready for you to solve.';
 const SCREEN_TWO_NARRATION='Listen carefully. What do these words have in common?';
 const SCREEN_THREE_NARRATION='What do these words have in common?';
+const SCREEN_FOUR_COMPLIMENTS=['Nice job!','Congratulations!','That is first-class work!'];
+const SCREEN_FOUR_SOUND_LAB_NARRATION="Let's move to the Sound Lab and solve more mysteries.";
+const SCREEN_FOUR_CONFETTI_MS=3000;
+const LETTER_NAMES={a:'ay',b:'bee',c:'see',d:'dee',e:'ee',f:'eff',g:'gee',h:'aitch',i:'eye',j:'jay',k:'kay',l:'el',m:'em',n:'en',o:'oh',p:'pee',q:'cue',r:'ar',s:'ess',t:'tee',u:'you',v:'vee',w:'double-you',x:'ex',y:'why',z:'zee'};
 function chooseNarratorVoice(voices){
   const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
   if(!english.length)return null;
@@ -71,8 +75,15 @@ function speak(text,rate=.78,callbacks={}){
 function stopNarration(){
   screenTwoRun++;
   screenThreeRun++;
+  screenFourRun++;
   clearTimeout(screenTwoTimer);
   clearTimeout(screenThreeTimer);
+  clearTimeout(screenFourTimer);
+  if(screenFourRoot?.isConnected){
+    screenFourRoot.querySelector('[data-screen-four-confetti]')?.classList.remove('active');
+    screenFourRoot.querySelector('[data-sound-lab-prompt]')?.classList.remove('ready','fallback');
+  }
+  screenFourRoot=null;
   pendingNarration=null;
   activeNarration=null;
   clearTimeout(voiceWaitTimer);
@@ -98,16 +109,18 @@ function renderRewards(){return `<span class="eyebrow">Detective profile</span><
 function renderProgress(){const accuracy=state.completed.length?'92%':'—';return `<span class="eyebrow">Grown-up view</span><h1>Reading Progress</h1><div class="grid"><article class="card"><h2>${state.completed.length}</h2><p>Lessons completed</p></article><article class="card"><h2>${state.completed.length*10}</h2><p>Words practiced</p></article><article class="card"><h2>${accuracy}</h2><p>Practice accuracy</p></article></div><section class="card" style="margin-top:20px"><h2>Current skill: ${lesson().pattern}</h2><p>Words to practice: ${lesson().words.join(', ')}</p><p>Progress is stored in this browser for the prototype.</p></section>`}
 
 const screenNames=['Welcome','Listen and Look','Discovery Question','Pattern Reveal','More Examples','Build the Pattern','Read the Words','Build Fluency','Read Sentences','Story','Spelling','Pattern Hunt','Challenge','Mastery Check','Celebration'];
-function lessonFrame(body){const current=state.screen==='sound'?4:state.screen;return `<main class="main lessonShell"><div class="lessonHead"><button class="secondary" data-exit>← Exit case</button><span class="pill">Case ${state.lesson+1}: ${lesson().pattern}</span><button class="secondary" data-replay>🔊 Play</button></div><div class="progress"><span style="width:${Math.min(100,current/15*100)}%"></span></div><section class="screenCard ${state.screen===15?'celebrate':''}">${body}</section></main>`}
+function lessonFrame(body){const current=state.screen==='sound'?4:state.screen;return `<main class="main lessonShell"><div class="lessonHead"><button class="secondary" data-exit>← Exit case</button><span class="pill">Case ${state.lesson+1}: ${lesson().pattern}</span><button class="secondary" data-replay>🔊 Play</button></div><div class="progress"><span style="width:${Math.min(100,current/15*100)}%"></span></div><section class="screenCard ${state.screen===4?'rimeReveal':''} ${state.screen===15?'celebrate':''}">${body}</section></main>`}
 function nextButton(next,label='Continue'){return `<div class="footerActions"><button class="primary" data-next="${next}">${label} →</button></div>`}
 function startCasePrompt(){return `<div class="footerActions startCasePrompt"><span class="startCaseArrow" aria-hidden="true">➜</span><button class="primary startCaseButton" data-next="2">Start the Case</button></div>`}
-function wordCards(words,highlight=false){return `<div class="wordRow">${words.map(w=>{if(!highlight)return`<div class="word">${w}</div>`;const e=ending(),o=w.slice(0,-e.length);return`<div class="word">${o}<mark>${e}</mark></div>`}).join('')}</div>`}
+function wordCards(words,highlight=false){return `<div class="wordRow">${words.map(w=>{if(!highlight)return`<div class="word">${w}</div>`;const e=ending();if(!w.toLowerCase().endsWith(e.toLowerCase()))return`<div class="word">${w}</div>`;const o=w.slice(0,-e.length),r=w.slice(-e.length);return`<div class="word rimeWord">${o}<mark data-rime="${r.toLowerCase()}">${r}</mark></div>`}).join('')}</div>`}
 function flashWordCards(words){return `<div class="wordRow flashWordRow" aria-label="Words to listen for">${words.map(w=>`<div class="word flashWord" data-flash-word="${w}">${w}</div>`).join('')}</div>`}
+function screenFourConfetti(){const colors=['#e4a83d','#287a67','#3c74b9','#e56b6f','#8f6ccf','#f3c84b'];return `<div class="confettiLayer" data-screen-four-confetti aria-hidden="true">${Array.from({length:42},(_,i)=>`<span class="confettiPiece" style="--x:${(i*37)%101}%;--delay:${(i*43)%520}ms;--duration:${1850+(i*71)%520}ms;--drift:${((i*29)%101)-50}px;--spin:${360+(i*97)%720}deg;--confetti:${colors[i%colors.length]}"></span>`).join('')}</div>`}
+function soundLabPrompt(){return `<div class="footerActions soundLabPrompt" data-sound-lab-prompt><span class="soundLabArrow" aria-hidden="true">➜</span><button class="primary" data-next="sound">Open the Sound Lab →</button></div>`}
 function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="screenTag">SCREEN ${n} OF 15 · ${screenNames[n-1]}</span>`;
   if(s===1)return lessonFrame(`${tag(1)}<div class="bigReward">🕵️</div><h1>Welcome, Pattern Detective!</h1><p>Your next case is the <strong>${l.pattern}</strong> word family.</p>${startCasePrompt()}`);
   if(s===2)return lessonFrame(`${tag(2)}<h1>Listen carefully.</h1><p class="screenTwoQuestion">What do these words have in common?</p>${flashWordCards(l.words)}<p class="clue">Watch each word flash as you hear it.</p><div class="footerActions"><button class="secondary hearWordsButton" data-play-word-sequence aria-label="Hear the Words again"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-next="3">I listened →</button></div>`);
   if(s===3)return lessonFrame(`${tag(3)}<h1>What do these words have in common?</h1>${wordCards(l.words)}<div class="timer" role="status"><b>3</b><span>Think or say your answer. The clue appears automatically.</span></div>${nextButton(4,'Reveal the clue')}`);
-  if(s===4)return lessonFrame(`${tag(4)}<h1>They all end with <mark>${l.pattern}</mark>.</h1>${wordCards(l.words,true)}<p class="clue">The beginning changes. The ${l.pattern} rime stays the same.</p>${nextButton('sound','Open the Sound Lab')}`);
+  if(s===4)return lessonFrame(`${screenFourConfetti()}${tag(4)}<h1>They all end with <mark>${l.pattern}</mark>.</h1>${wordCards(l.words,true)}<p class="clue">The beginning changes. The ${l.pattern} rime stays the same.</p><p class="rimeSequenceStatus" data-screen-four-status aria-live="polite">Listen as the rime is taken apart and put back together.</p>${soundLabPrompt()}`);
   if(s==='sound')return lessonFrame(renderSoundLab());
   if(s===5)return lessonFrame(`${tag(5)}<h1>More examples</h1>${wordCards(l.words)}<p>What part stays the same?</p><div class="choiceRow"><button class="choice" data-correct>${l.pattern}</button><button class="choice" data-wrong>-at</button><button class="choice" data-wrong>-op</button></div>`);
   if(s===6){const os=l.words.map(onset);return lessonFrame(`${tag(6)}<h1>Build the pattern</h1><div class="word">_ ${ending()}</div><p>Choose a beginning sound and build a word.</p><div class="choiceRow">${os.map((o,i)=>`<button class="choice" data-build="${i}">${o||'∅'}</button>`).join('')}</div><div class="clue">Every onset snaps onto the ${l.pattern} rime.</div>${nextButton(7)}`)}
@@ -153,11 +166,79 @@ function startScreenThreeSequence(){
     if(result.error||result.unavailable){toast('Narration is unavailable. Select Reveal the clue to continue.');return}
     screenThreeTimer=setTimeout(()=>{
       if(!isCurrent())return;
-      stopNarration();
-      state.screen=4;
-      render();
+      goToLessonScreen(4);
     },3000);
   }});
+}
+
+function startScreenFourSequence(){
+  stopNarration();
+  const run=++screenFourRun,lessonIndex=state.lesson,rime=ending(),letters=[...rime],compliment=SCREEN_FOUR_COMPLIMENTS[state.lesson%SCREEN_FOUR_COMPLIMENTS.length];
+  const root=document.querySelector('.rimeReveal');
+  if(state.view!=='lesson'||state.screen!==4||!root)return;
+  screenFourRoot=root;
+  const confetti=root.querySelector('[data-screen-four-confetti]'),prompt=root.querySelector('[data-sound-lab-prompt]'),status=root.querySelector('[data-screen-four-status]');
+  if(!confetti||!prompt||!status)return;
+  confetti.classList.remove('active');
+  prompt.classList.remove('ready','fallback');
+  status.textContent='Listen as the rime is taken apart and put back together.';
+  const isCurrent=()=>run===screenFourRun&&state.view==='lesson'&&state.screen===4&&state.lesson===lessonIndex&&root.isConnected;
+  const wait=(next,delay)=>{screenFourTimer=setTimeout(()=>{if(isCurrent())next()},delay)};
+  const fail=(keepInvitation=false)=>{
+    if(!isCurrent())return;
+    confetti.classList.remove('active');
+    prompt.classList.add('ready','fallback');
+    status.textContent=keepInvitation?`${SCREEN_FOUR_SOUND_LAB_NARRATION} Narration is unavailable; open the Sound Lab to continue.`:'Narration is unavailable. Select Play to try again, or open the Sound Lab to continue.';
+    toast('Narration is unavailable. You can use Play or open the Sound Lab.');
+  };
+  const speakStage=(text,label,next,rate=.7,pause=320)=>{
+    if(!isCurrent())return;
+    status.textContent=label;
+    speak(text,rate,{onComplete:(result={})=>{
+      if(!isCurrent())return;
+      if(result.error||result.unavailable){fail();return}
+      wait(next,pause);
+    }});
+  };
+  const inviteToSoundLab=()=>{
+    if(!isCurrent())return;
+    confetti.classList.remove('active');
+    prompt.classList.add('ready');
+    status.textContent=SCREEN_FOUR_SOUND_LAB_NARRATION;
+    speak(SCREEN_FOUR_SOUND_LAB_NARRATION,.78,{onComplete:(result={})=>{
+      if(!isCurrent())return;
+      if(result.error||result.unavailable){fail(true);return}
+      status.textContent='Sound Lab ready!';
+    }});
+  };
+  const celebrate=()=>{
+    if(!isCurrent())return;
+    status.textContent='Celebration time!';
+    confetti.classList.add('active');
+    screenFourTimer=setTimeout(()=>{if(isCurrent())inviteToSoundLab()},SCREEN_FOUR_CONFETTI_MS);
+  };
+  const praise=()=>speakStage(compliment,compliment,celebrate,.78,250);
+  const repeatRime=()=>speakStage(rime,`Rime together: ${rime}`,praise,.68,350);
+  const speakLetter=(index)=>{
+    if(index>=letters.length){repeatRime();return}
+    const letter=letters[index].toLowerCase();
+    speakStage(LETTER_NAMES[letter]||letter.toUpperCase(),`Letter: ${letter.toUpperCase()}`,()=>speakLetter(index+1),.62,280);
+  };
+  speakStage(rime,`Rime: ${rime}`,()=>speakLetter(0),.68,350);
+}
+
+function startAutomaticLessonSequence(){
+  if(state.view!=='lesson')return;
+  if(state.screen===2)startScreenTwoSequence();
+  else if(state.screen===3)startScreenThreeSequence();
+  else if(state.screen===4)startScreenFourSequence();
+}
+
+function goToLessonScreen(next){
+  stopNarration();
+  state.screen=next==='sound'?'sound':+next;
+  render();
+  startAutomaticLessonSequence();
 }
 
 function bind(){
@@ -165,10 +246,10 @@ function bind(){
   document.querySelectorAll('[data-start]').forEach(x=>x.onclick=()=>{stopNarration();state.view='lesson';state.screen=1;resetLesson();render();speak(SCREEN_ONE_NARRATION)});
   document.querySelectorAll('[data-lesson]').forEach(x=>x.onclick=()=>{stopNarration();state.lesson=+x.dataset.lesson;state.view='lesson';state.screen=1;resetLesson();save();render();speak(SCREEN_ONE_NARRATION)});
   document.querySelectorAll('[data-exit]').forEach(x=>x.onclick=()=>{stopNarration();state.view='home';render()});
-  document.querySelectorAll('[data-next]').forEach(x=>x.onclick=()=>{stopNarration();state.screen=x.dataset.next==='sound'?'sound':+x.dataset.next;render();if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence()});
+  document.querySelectorAll('[data-next]').forEach(x=>x.onclick=()=>goToLessonScreen(x.dataset.next));
   document.querySelectorAll('[data-speak]').forEach(x=>x.onclick=()=>speak(x.dataset.speak));
   document.querySelectorAll('[data-play-word-sequence]').forEach(x=>x.onclick=()=>startScreenTwoSequence());
-  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
+  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else if(state.screen===4)startScreenFourSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
   document.querySelectorAll('[data-correct]').forEach(x=>x.onclick=()=>{toast('Correct clue! ⭐');setTimeout(()=>{state.screen=6;render()},500)});
   document.querySelectorAll('[data-wrong]').forEach(x=>x.onclick=()=>toast('Look at the ending and try again.'));
   document.querySelectorAll('[data-build]').forEach(x=>x.onclick=()=>{toast(`${lesson().words[+x.dataset.build]} — clue built!`) });
