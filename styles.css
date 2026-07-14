@@ -80,6 +80,14 @@ h1,h2,h3,p{margin-top:0}
 .rimeReveal .rimeWord mark{background:#ffe58f;color:#174d43;border:2px solid #e4a83d;box-shadow:0 0 0 5px rgba(228,168,61,.14);animation:rimeGlow 1s ease-in-out 2}
 .rimeSequenceStatus{min-height:46px;display:flex;align-items:center;justify-content:center;margin:0;padding:10px 16px;border-radius:12px;background:#edf7f3;color:var(--green2);font-weight:900}
 .screenFourQuestion{min-height:50px;max-width:640px;display:flex;align-items:center;justify-content:center;margin:0;padding:10px 16px;border-radius:12px;background:#edf7f3;color:var(--green2);font-size:20px;font-weight:900}
+.screenFourWord{transition:none}
+.screenFourWord.active{transform:scale(1.1);border-color:var(--gold);background:#fff4cf;box-shadow:0 10px 25px rgba(180,125,26,.24);animation:wordFlash .65s ease-in-out infinite}
+.buildWordBox{display:inline-flex;align-items:center;justify-content:center;gap:0;min-width:210px;margin:22px 0 16px;transition:border-color .2s ease,background .2s ease,box-shadow .2s ease}
+.buildWordBox.built{border-color:var(--green);background:#e8f6f1;box-shadow:0 8px 20px rgba(40,122,103,.16)}
+.buildWordBox.built .buildOnset{color:var(--green2)}
+.buildWordBox.built .buildOnset:empty{display:none}
+.buildInstruction{min-height:50px;max-width:680px;display:flex;align-items:center;justify-content:center;margin:0;padding:10px 16px;border-radius:12px;background:#edf7f3;color:var(--green2);font-size:20px;font-weight:900}
+.buildChoice.selected{border-color:var(--green);background:#dff1ea;box-shadow:0 0 0 4px rgba(40,122,103,.12)}
 .revealContinuePrompt{align-items:center;justify-content:center;gap:14px}
 .revealContinueArrow{width:46px;color:var(--gold);font-size:40px;font-weight:900;line-height:1;opacity:0;visibility:hidden;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(122,83,18,.22))}
 .revealContinuePrompt.ready .revealContinueArrow{visibility:visible;animation:continuePoint .65s ease-in-out infinite alternate,continueFlash 1s ease-in-out infinite}
@@ -96,9 +104,9 @@ h1,h2,h3,p{margin-top:0}
 @keyframes continueFlash{0%,100%{opacity:1;filter:drop-shadow(0 4px 5px rgba(122,83,18,.22))}50%{opacity:.28;filter:drop-shadow(0 4px 10px rgba(228,168,61,.5))}}
 @keyframes confettiFall{0%{opacity:0;transform:translate3d(0,-20px,0) rotate(0)}10%{opacity:1}100%{opacity:1;transform:translate3d(var(--drift),680px,0) rotate(var(--spin))}}
 @media(prefers-reduced-motion:reduce){
-  .startCaseArrow,.flashWord.active,.rimeReveal .rimeWord mark,.revealContinuePrompt.ready .revealContinueArrow,.confettiLayer.active .confettiPiece{animation:none}
-  .flashWord{transition:none}
-  .flashWord.active{transform:scale(1.03)}
+  .startCaseArrow,.flashWord.active,.screenFourWord.active,.rimeReveal .rimeWord mark,.revealContinuePrompt.ready .revealContinueArrow,.confettiLayer.active .confettiPiece{animation:none}
+  .flashWord,.screenFourWord{transition:none}
+  .flashWord.active,.screenFourWord.active{transform:scale(1.03)}
   .revealContinuePrompt.ready .revealContinueArrow{opacity:1;visibility:visible;transform:none}
   .confettiLayer.active .confettiPiece{top:12%;opacity:.85;transform:none}
 }
