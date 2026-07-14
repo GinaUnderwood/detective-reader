@@ -17,7 +17,6 @@ let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer
 let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null,screenThreeRoot=null,screenFourRun=0,screenFourTimer=null;
 const SCREEN_ONE_NARRATION='Welcome Pattern Detective. Your next case is ready for you to solve.';
 const SCREEN_TWO_NARRATION='Listen carefully. What do these words have in common?';
-const SCREEN_THREE_COMPLIMENTS=['Nice job!','Congratulations!','That is first-class work!'];
 const SCREEN_THREE_CONFETTI_MS=3000;
 const SCREEN_THREE_ENDING_NARRATION='Their ending sound is the same.';
 const SCREEN_FOUR_INTRO="Let's keep reading.";
@@ -155,7 +154,7 @@ function startScreenTwoSequence(){
 
 function startScreenThreeSequence(){
   stopNarration();
-  const run=++screenThreeRun,lessonIndex=state.lesson,words=[...lesson().words],compliment=SCREEN_THREE_COMPLIMENTS[state.lesson%SCREEN_THREE_COMPLIMENTS.length];
+  const run=++screenThreeRun,lessonIndex=state.lesson,words=[...lesson().words];
   const root=document.querySelector('.rimeReveal');
   if(state.view!=='lesson'||state.screen!==3||!root)return;
   screenThreeRoot=root;
@@ -194,9 +193,8 @@ function startScreenThreeSequence(){
     confetti.classList.add('active');
     screenThreeTimer=setTimeout(()=>{if(isCurrent())finishReveal()},SCREEN_THREE_CONFETTI_MS);
   };
-  const praise=()=>speakStage(compliment,compliment,celebrate,.78,250);
   const readWord=(index)=>{
-    if(index>=words.length){praise();return}
+    if(index>=words.length){celebrate();return}
     const word=words[index];
     speakStage(word,`Word ${index+1}: ${word}`,()=>readWord(index+1),.68,350);
   };
