@@ -12,7 +12,45 @@ function save(){localStorage.setItem('detectiveReader',JSON.stringify({lesson:st
 function lesson(){return LESSONS[state.lesson]}
 function ending(){return lesson().pattern.slice(1)}
 function onset(word){return word.slice(0,-ending().length).toLowerCase()}
-function speak(text,rate=.72){if(!('speechSynthesis'in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=rate;speechSynthesis.speak(u)}
+const FEMALE_NARRATOR_PRIORITIES=['Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)','Microsoft Ava Online (Natural)','Microsoft Emma Multilingual Online (Natural)','Microsoft Aria','Microsoft Jenny','Microsoft Ava','Microsoft Emma','Google UK English Female','Google US English','Samantha','Ava','Emma','Allison','Zira','Victoria','Karen','Moira','Tessa','Fiona','Libby','Sonia','Hazel','Susan','Serena','Kate','Veena','Joanna','Kendra','Kimberly','Ivy','Salli'];
+let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer=null;
+function chooseNarratorVoice(voices){
+  const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
+  if(!english.length)return null;
+  for(const preferred of FEMALE_NARRATOR_PRIORITIES){const wanted=preferred.toLowerCase(),match=english.find(v=>{const name=v.name.toLowerCase();return wanted.includes(' ')?name.includes(wanted):name.split(/[^a-z]+/).includes(wanted)});if(match)return match}
+  return english.find(v=>/\bfemale\b/i.test(v.name))||null;
+}
+function refreshNarratorVoice(){
+  narratorVoice=chooseNarratorVoice(speechSynthesis.getVoices())||narratorVoice;
+  if(narratorVoice&&pendingNarration){const request=pendingNarration;pendingNarration=null;speak(request.text,request.rate)}
+}
+function waitForNarratorVoice(tries=20){
+  clearTimeout(voiceWaitTimer);
+  voiceWaitTimer=setTimeout(()=>{refreshNarratorVoice();if(!pendingNarration)return;if(tries>1)waitForNarratorVoice(tries-1);else{pendingNarration=null;toast('A warm female narration voice is not available on this device.')}},250);
+}
+function speak(text,rate=.78){
+  if(!('speechSynthesis'in window))return;
+  const voices=speechSynthesis.getVoices();
+  if(!narratorVoice||!voices.some(v=>v.name===narratorVoice.name&&v.lang===narratorVoice.lang))narratorVoice=chooseNarratorVoice(voices);
+  if(!narratorVoice){
+    pendingNarration={text,rate};
+    waitForNarratorVoice();
+    return;
+  }
+  pendingNarration=null;
+  clearTimeout(voiceWaitTimer);
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.voice=narratorVoice;
+  u.lang=narratorVoice.lang||'en-US';
+  u.rate=rate;
+  u.pitch=1.04;
+  u.volume=1;
+  activeNarration=u;
+  u.onend=u.onerror=()=>{if(activeNarration===u)activeNarration=null};
+  speechSynthesis.speak(u);
+}
+if('speechSynthesis'in window){refreshNarratorVoice();speechSynthesis.addEventListener('voiceschanged',refreshNarratorVoice)}
 function toast(text){const t=document.createElement('div');t.className='toast';t.textContent=text;document.body.append(t);setTimeout(()=>t.remove(),1800)}
 function header(){return `<header class="topbar"><button class="brand" data-view="home" aria-label="Detective Reader home"><span class="glass"></span><span>Detective Reader<small>solve every word</small></span></button><div class="topstats"><span class="pill">${AVATARS[state.avatar][0]} ${AVATARS[state.avatar][1]}</span><button class="pill coin" data-view="rewards">🪙 ${state.coins}</button></div></header>`}
 function shell(content,active='home'){return `${header()}<div class="layout"><aside class="sidebar"><button class="navbtn ${active==='home'?'active':''}" data-view="home">🏠 Case Board</button><button class="navbtn ${active==='path'?'active':''}" data-view="path">🗺️ Lesson Path</button><button class="navbtn ${active==='rewards'?'active':''}" data-view="rewards">🎒 Avatar & Shop</button><button class="navbtn" data-view="progress">📈 Progress</button></aside><main class="main">${content}</main></div>`}

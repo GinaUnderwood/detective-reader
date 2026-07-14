@@ -13,4 +13,4 @@ mastery check and celebration.
 
 ## Important production note
 
-The prototype uses browser speech synthesis. A production version should use professionally recorded phoneme clips so isolated sounds are pronounced without letter names or added vowel sounds. Speech recognition, secure accounts, subscriptions, and durable server-side progress tracking should be added by the production developer.
+The prototype uses browser speech synthesis and consistently prefers a warm, natural-sounding female English narrator across all 50 lessons. The exact voice depends on which voices are installed on the learner's device. A production version should use professionally recorded female narration and phoneme clips so the narrator remains identical across devices and isolated sounds are pronounced without letter names or added vowel sounds. Speech recognition, secure accounts, subscriptions, and durable server-side progress tracking should be added by the production developer.
