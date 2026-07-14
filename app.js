@@ -65,7 +65,7 @@ function speak(text,rate=.78,callbacks={}){
   u.onend=()=>finish(false);
   u.onerror=()=>finish(true);
   speechSynthesis.speak(u);
-  watchdogTimer=setTimeout(()=>{speechSynthesis.cancel();finish(true)},Math.max(5000,Math.min(20000,text.length*120)));
+  watchdogTimer=setTimeout(()=>{finish(true);speechSynthesis.cancel()},Math.max(5000,Math.min(20000,text.length*120)));
   activeNarrationTimer=watchdogTimer;
 }
 function stopNarration(){
@@ -148,8 +148,9 @@ function startScreenThreeSequence(){
   const run=++screenThreeRun,lessonIndex=state.lesson;
   if(state.view!=='lesson'||state.screen!==3)return;
   const isCurrent=()=>run===screenThreeRun&&state.view==='lesson'&&state.screen===3&&state.lesson===lessonIndex;
-  speak(SCREEN_THREE_NARRATION,.78,{onComplete:()=>{
+  speak(SCREEN_THREE_NARRATION,.78,{onComplete:(result={})=>{
     if(!isCurrent())return;
+    if(result.error||result.unavailable){toast('Narration is unavailable. Select Reveal the clue to continue.');return}
     screenThreeTimer=setTimeout(()=>{
       if(!isCurrent())return;
       stopNarration();
