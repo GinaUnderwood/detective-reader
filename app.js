@@ -19,7 +19,7 @@ const SCREEN_ONE_NARRATION='Welcome Pattern Detective. Your next case is ready f
 const SCREEN_TWO_NARRATION='Listen carefully. What do these words have in common?';
 const SCREEN_THREE_COMPLIMENTS=['Nice job!','Congratulations!','That is first-class work!'];
 const SCREEN_THREE_CONFETTI_MS=3000;
-const LETTER_NAMES={a:'ay',b:'bee',c:'see',d:'dee',e:'ee',f:'eff',g:'gee',h:'aitch',i:'eye',j:'jay',k:'kay',l:'el',m:'em',n:'en',o:'oh',p:'pee',q:'cue',r:'ar',s:'ess',t:'tee',u:'you',v:'vee',w:'double-you',x:'ex',y:'why',z:'zee'};
+const SCREEN_THREE_WORD_INTRO="Let's read these words together.";
 function chooseNarratorVoice(voices){
   const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
   if(!english.length)return null;
@@ -115,7 +115,7 @@ function screenThreeContinuePrompt(){return `<div class="footerActions revealCon
 function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="screenTag">SCREEN ${n} OF ${screenNames.length} · ${screenNames[n-1]}</span>`;
   if(s===1)return lessonFrame(`${tag(1)}<div class="bigReward">🕵️</div><h1>Welcome, Pattern Detective!</h1><p>Your next case is the <strong>${l.pattern}</strong> word family.</p>${startCasePrompt()}`);
   if(s===2)return lessonFrame(`${tag(2)}<h1>Listen carefully.</h1><p class="screenTwoQuestion">What do these words have in common?</p>${flashWordCards(l.words)}<p class="clue">Watch each word flash as you hear it.</p><div class="footerActions"><button class="secondary hearWordsButton" data-play-word-sequence aria-label="Hear the Words again"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-next="3">I listened →</button></div>`);
-  if(s===3)return lessonFrame(`${screenThreeConfetti()}${tag(3)}<h1>They all end with <mark>${l.pattern}</mark>.</h1>${wordCards(l.words,true)}<p class="clue">The beginning changes. The ${l.pattern} rime stays the same.</p><p class="rimeSequenceStatus" data-screen-three-status aria-live="polite">Listen as the rime is taken apart and put back together.</p>${screenThreeContinuePrompt()}`);
+  if(s===3)return lessonFrame(`${screenThreeConfetti()}${tag(3)}<h1>They all end with <mark>${l.pattern}</mark>.</h1>${wordCards(l.words,true)}<p class="clue">The beginning changes. The ${l.pattern} rime stays the same.</p><p class="rimeSequenceStatus" data-screen-three-status aria-live="polite">Listen to the rime, then read the words together.</p>${screenThreeContinuePrompt()}`);
   if(s===4)return lessonFrame(`${tag(4)}<h1>More examples</h1>${wordCards(l.words)}<p>What part stays the same?</p><div class="choiceRow"><button class="choice" data-correct>${l.pattern}</button><button class="choice" data-wrong>-at</button><button class="choice" data-wrong>-op</button></div>`);
   if(s===5){const os=l.words.map(onset);return lessonFrame(`${tag(5)}<h1>Build the pattern</h1><div class="word">_ ${ending()}</div><p>Choose a beginning sound and build a word.</p><div class="choiceRow">${os.map((o,i)=>`<button class="choice" data-build="${i}">${o||'∅'}</button>`).join('')}</div><div class="clue">Every onset snaps onto the ${l.pattern} rime.</div>${nextButton(6)}`)}
   if(s===6)return lessonFrame(`${tag(6)}<h1>Read each word.</h1><div class="word">${l.words[state.readIndex%l.words.length]}</div><p>${state.readIndex+1} of 6</p><div class="footerActions"><button class="secondary" data-speak="${l.words[state.readIndex%l.words.length]}">🔊 Tap sounds</button><button class="primary" data-read>✓ I read it</button></div>`);
@@ -149,7 +149,7 @@ function startScreenTwoSequence(){
 
 function startScreenThreeSequence(){
   stopNarration();
-  const run=++screenThreeRun,lessonIndex=state.lesson,rime=ending(),letters=[...rime],compliment=SCREEN_THREE_COMPLIMENTS[state.lesson%SCREEN_THREE_COMPLIMENTS.length];
+  const run=++screenThreeRun,lessonIndex=state.lesson,rime=ending(),words=[...lesson().words],compliment=SCREEN_THREE_COMPLIMENTS[state.lesson%SCREEN_THREE_COMPLIMENTS.length];
   const root=document.querySelector('.rimeReveal');
   if(state.view!=='lesson'||state.screen!==3||!root)return;
   screenThreeRoot=root;
@@ -157,7 +157,7 @@ function startScreenThreeSequence(){
   if(!confetti||!prompt||!status)return;
   confetti.classList.remove('active');
   prompt.classList.remove('ready','fallback');
-  status.textContent='Listen as the rime is taken apart and put back together.';
+  status.textContent='Listen to the rime, then read the words together.';
   const isCurrent=()=>run===screenThreeRun&&state.view==='lesson'&&state.screen===3&&state.lesson===lessonIndex&&root.isConnected;
   const wait=(next,delay)=>{screenThreeTimer=setTimeout(()=>{if(isCurrent())next()},delay)};
   const fail=()=>{
@@ -189,13 +189,13 @@ function startScreenThreeSequence(){
     screenThreeTimer=setTimeout(()=>{if(isCurrent())finishReveal()},SCREEN_THREE_CONFETTI_MS);
   };
   const praise=()=>speakStage(compliment,compliment,celebrate,.78,250);
-  const repeatRime=()=>speakStage(rime,`Rime together: ${rime}`,praise,.68,350);
-  const speakLetter=(index)=>{
-    if(index>=letters.length){repeatRime();return}
-    const letter=letters[index].toLowerCase();
-    speakStage(LETTER_NAMES[letter]||letter.toUpperCase(),`Letter: ${letter.toUpperCase()}`,()=>speakLetter(index+1),.62,280);
+  const readWord=(index)=>{
+    if(index>=words.length){praise();return}
+    const word=words[index];
+    speakStage(word,`Word ${index+1}: ${word}`,()=>readWord(index+1),.68,350);
   };
-  speakStage(rime,`Rime: ${rime}`,()=>speakLetter(0),.68,350);
+  const introduceWords=()=>speakStage(SCREEN_THREE_WORD_INTRO,SCREEN_THREE_WORD_INTRO,()=>readWord(0),.78,400);
+  speakStage(rime,`Rime: ${rime}`,introduceWords,.68,350);
 }
 
 function startAutomaticLessonSequence(){
