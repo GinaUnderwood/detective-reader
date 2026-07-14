@@ -14,9 +14,10 @@ function ending(){return lesson().pattern.slice(1)}
 function onset(word){return word.slice(0,-ending().length).toLowerCase()}
 const FEMALE_NARRATOR_PRIORITIES=['Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)','Microsoft Ava Online (Natural)','Microsoft Emma Multilingual Online (Natural)','Microsoft Aria','Microsoft Jenny','Microsoft Ava','Microsoft Emma','Google UK English Female','Google US English','Samantha','Ava','Emma','Allison','Zira','Victoria','Karen','Moira','Tessa','Fiona','Libby','Sonia','Hazel','Susan','Serena','Kate','Veena','Joanna','Kendra','Kimberly','Ivy','Salli'];
 let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer=null,activeNarrationTimer=null,narratorUnavailable=false;
-let screenTwoRun=0,screenTwoTimer=null;
+let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null;
 const SCREEN_ONE_NARRATION='Welcome Pattern Detective. Your next case is ready for you to solve.';
 const SCREEN_TWO_NARRATION='Listen carefully. What do these words have in common?';
+const SCREEN_THREE_NARRATION='What do these words have in common?';
 function chooseNarratorVoice(voices){
   const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
   if(!english.length)return null;
@@ -59,17 +60,19 @@ function speak(text,rate=.78,callbacks={}){
   u.volume=1;
   activeNarration=u;
   let finished=false,watchdogTimer=null;
-  u.onstart=()=>{if(callbacks.onStart)callbacks.onStart()};
+  u.onstart=()=>{if(finished)return;if(callbacks.onStart)callbacks.onStart()};
   const finish=(error=false)=>{if(finished)return;finished=true;clearTimeout(watchdogTimer);if(activeNarration===u)activeNarration=null;if(callbacks.onComplete)callbacks.onComplete({error})};
   u.onend=()=>finish(false);
   u.onerror=()=>finish(true);
   speechSynthesis.speak(u);
-  watchdogTimer=setTimeout(()=>finish(true),Math.max(5000,Math.min(20000,text.length*120)));
+  watchdogTimer=setTimeout(()=>{speechSynthesis.cancel();finish(true)},Math.max(5000,Math.min(20000,text.length*120)));
   activeNarrationTimer=watchdogTimer;
 }
 function stopNarration(){
   screenTwoRun++;
+  screenThreeRun++;
   clearTimeout(screenTwoTimer);
+  clearTimeout(screenThreeTimer);
   pendingNarration=null;
   activeNarration=null;
   clearTimeout(voiceWaitTimer);
@@ -103,7 +106,7 @@ function flashWordCards(words){return `<div class="wordRow flashWordRow" aria-la
 function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="screenTag">SCREEN ${n} OF 15 · ${screenNames[n-1]}</span>`;
   if(s===1)return lessonFrame(`${tag(1)}<div class="bigReward">🕵️</div><h1>Welcome, Pattern Detective!</h1><p>Your next case is the <strong>${l.pattern}</strong> word family.</p>${startCasePrompt()}`);
   if(s===2)return lessonFrame(`${tag(2)}<h1>Listen carefully.</h1><p class="screenTwoQuestion">What do these words have in common?</p>${flashWordCards(l.words)}<p class="clue">Watch each word flash as you hear it.</p><div class="footerActions"><button class="secondary hearWordsButton" data-play-word-sequence aria-label="Hear the Words again"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-next="3">I listened →</button></div>`);
-  if(s===3)return lessonFrame(`${tag(3)}<h1>What do these words have in common?</h1>${wordCards(l.words)}<div class="timer"><b>3</b><span>Think or say your answer. No penalty.</span></div>${nextButton(4,'Reveal the clue')}`);
+  if(s===3)return lessonFrame(`${tag(3)}<h1>What do these words have in common?</h1>${wordCards(l.words)}<div class="timer" role="status"><b>3</b><span>Think or say your answer. The clue appears automatically.</span></div>${nextButton(4,'Reveal the clue')}`);
   if(s===4)return lessonFrame(`${tag(4)}<h1>They all end with <mark>${l.pattern}</mark>.</h1>${wordCards(l.words,true)}<p class="clue">The beginning changes. The ${l.pattern} rime stays the same.</p>${nextButton('sound','Open the Sound Lab')}`);
   if(s==='sound')return lessonFrame(renderSoundLab());
   if(s===5)return lessonFrame(`${tag(5)}<h1>More examples</h1>${wordCards(l.words)}<p>What part stays the same?</p><div class="choiceRow"><button class="choice" data-correct>${l.pattern}</button><button class="choice" data-wrong>-at</button><button class="choice" data-wrong>-op</button></div>`);
@@ -140,15 +143,31 @@ function startScreenTwoSequence(){
   speak(SCREEN_TWO_NARRATION,.78,{onComplete:(result={})=>{if(!isCurrent()||result.error)return;screenTwoTimer=setTimeout(()=>playWord(0),500)}});
 }
 
+function startScreenThreeSequence(){
+  stopNarration();
+  const run=++screenThreeRun,lessonIndex=state.lesson;
+  if(state.view!=='lesson'||state.screen!==3)return;
+  const isCurrent=()=>run===screenThreeRun&&state.view==='lesson'&&state.screen===3&&state.lesson===lessonIndex;
+  speak(SCREEN_THREE_NARRATION,.78,{onComplete:()=>{
+    if(!isCurrent())return;
+    screenThreeTimer=setTimeout(()=>{
+      if(!isCurrent())return;
+      stopNarration();
+      state.screen=4;
+      render();
+    },3000);
+  }});
+}
+
 function bind(){
   document.querySelectorAll('[data-view]').forEach(x=>x.onclick=()=>{stopNarration();state.view=x.dataset.view;render()});
   document.querySelectorAll('[data-start]').forEach(x=>x.onclick=()=>{stopNarration();state.view='lesson';state.screen=1;resetLesson();render();speak(SCREEN_ONE_NARRATION)});
   document.querySelectorAll('[data-lesson]').forEach(x=>x.onclick=()=>{stopNarration();state.lesson=+x.dataset.lesson;state.view='lesson';state.screen=1;resetLesson();save();render();speak(SCREEN_ONE_NARRATION)});
   document.querySelectorAll('[data-exit]').forEach(x=>x.onclick=()=>{stopNarration();state.view='home';render()});
-  document.querySelectorAll('[data-next]').forEach(x=>x.onclick=()=>{stopNarration();state.screen=x.dataset.next==='sound'?'sound':+x.dataset.next;render();if(state.screen===2)startScreenTwoSequence()});
+  document.querySelectorAll('[data-next]').forEach(x=>x.onclick=()=>{stopNarration();state.screen=x.dataset.next==='sound'?'sound':+x.dataset.next;render();if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence()});
   document.querySelectorAll('[data-speak]').forEach(x=>x.onclick=()=>speak(x.dataset.speak));
   document.querySelectorAll('[data-play-word-sequence]').forEach(x=>x.onclick=()=>startScreenTwoSequence());
-  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
+  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
   document.querySelectorAll('[data-correct]').forEach(x=>x.onclick=()=>{toast('Correct clue! ⭐');setTimeout(()=>{state.screen=6;render()},500)});
   document.querySelectorAll('[data-wrong]').forEach(x=>x.onclick=()=>toast('Look at the ending and try again.'));
   document.querySelectorAll('[data-build]').forEach(x=>x.onclick=()=>{toast(`${lesson().words[+x.dataset.build]} — clue built!`) });
