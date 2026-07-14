@@ -14,13 +14,15 @@ function ending(){return lesson().pattern.slice(1)}
 function onset(word){return word.slice(0,-ending().length).toLowerCase()}
 const FEMALE_NARRATOR_PRIORITIES=['Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)','Microsoft Ava Online (Natural)','Microsoft Emma Multilingual Online (Natural)','Microsoft Aria','Microsoft Jenny','Microsoft Ava','Microsoft Emma','Google UK English Female','Google US English','Samantha','Ava','Emma','Allison','Zira','Victoria','Karen','Moira','Tessa','Fiona','Libby','Sonia','Hazel','Susan','Serena','Kate','Veena','Joanna','Kendra','Kimberly','Ivy','Salli'];
 let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer=null,activeNarrationTimer=null,narratorUnavailable=false;
-let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null,screenFourRun=0,screenFourTimer=null,screenFourRoot=null;
+let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null,screenFourRun=0,screenFourTimer=null,screenFourRoot=null,soundLabRun=0,soundLabTimer=null,soundLabRoot=null;
 const SCREEN_ONE_NARRATION='Welcome Pattern Detective. Your next case is ready for you to solve.';
 const SCREEN_TWO_NARRATION='Listen carefully. What do these words have in common?';
 const SCREEN_THREE_NARRATION='What do these words have in common?';
 const SCREEN_FOUR_COMPLIMENTS=['Nice job!','Congratulations!','That is first-class work!'];
 const SCREEN_FOUR_SOUND_LAB_NARRATION="Let's move to the Sound Lab and solve more mysteries.";
 const SCREEN_FOUR_CONFETTI_MS=3000;
+const SOUND_LAB_FIRST_PAUSE_MS=2000;
+const SOUND_LAB_SWITCH_PAUSE_MS=3000;
 const LETTER_NAMES={a:'ay',b:'bee',c:'see',d:'dee',e:'ee',f:'eff',g:'gee',h:'aitch',i:'eye',j:'jay',k:'kay',l:'el',m:'em',n:'en',o:'oh',p:'pee',q:'cue',r:'ar',s:'ess',t:'tee',u:'you',v:'vee',w:'double-you',x:'ex',y:'why',z:'zee'};
 function chooseNarratorVoice(voices){
   const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
@@ -76,14 +78,21 @@ function stopNarration(){
   screenTwoRun++;
   screenThreeRun++;
   screenFourRun++;
+  soundLabRun++;
   clearTimeout(screenTwoTimer);
   clearTimeout(screenThreeTimer);
   clearTimeout(screenFourTimer);
+  clearTimeout(soundLabTimer);
   if(screenFourRoot?.isConnected){
     screenFourRoot.querySelector('[data-screen-four-confetti]')?.classList.remove('active');
     screenFourRoot.querySelector('[data-sound-lab-prompt]')?.classList.remove('ready','fallback');
   }
   screenFourRoot=null;
+  if(soundLabRoot?.isConnected){
+    soundLabRoot.querySelector('[data-sound-circle-stage]')?.classList.remove('transformed');
+    soundLabRoot.querySelector('[data-sound-result-arrow]')?.classList.remove('slide');
+  }
+  soundLabRoot=null;
   pendingNarration=null;
   activeNarration=null;
   clearTimeout(voiceWaitTimer);
@@ -109,7 +118,7 @@ function renderRewards(){return `<span class="eyebrow">Detective profile</span><
 function renderProgress(){const accuracy=state.completed.length?'92%':'—';return `<span class="eyebrow">Grown-up view</span><h1>Reading Progress</h1><div class="grid"><article class="card"><h2>${state.completed.length}</h2><p>Lessons completed</p></article><article class="card"><h2>${state.completed.length*10}</h2><p>Words practiced</p></article><article class="card"><h2>${accuracy}</h2><p>Practice accuracy</p></article></div><section class="card" style="margin-top:20px"><h2>Current skill: ${lesson().pattern}</h2><p>Words to practice: ${lesson().words.join(', ')}</p><p>Progress is stored in this browser for the prototype.</p></section>`}
 
 const screenNames=['Welcome','Listen and Look','Discovery Question','Pattern Reveal','More Examples','Build the Pattern','Read the Words','Build Fluency','Read Sentences','Story','Spelling','Pattern Hunt','Challenge','Mastery Check','Celebration'];
-function lessonFrame(body){const current=state.screen==='sound'?4:state.screen;return `<main class="main lessonShell"><div class="lessonHead"><button class="secondary" data-exit>← Exit case</button><span class="pill">Case ${state.lesson+1}: ${lesson().pattern}</span><button class="secondary" data-replay>🔊 Play</button></div><div class="progress"><span style="width:${Math.min(100,current/15*100)}%"></span></div><section class="screenCard ${state.screen===4?'rimeReveal':''} ${state.screen===15?'celebrate':''}">${body}</section></main>`}
+function lessonFrame(body){const current=state.screen==='sound'?4:state.screen,playLabel=state.screen==='sound'?'Play this Sound Lab drill':'Play this screen';return `<main class="main lessonShell"><div class="lessonHead"><button class="secondary" data-exit>← Exit case</button><span class="pill">Case ${state.lesson+1}: ${lesson().pattern}</span><button class="secondary" data-replay aria-label="${playLabel}">🔊 Play</button></div><div class="progress"><span style="width:${Math.min(100,current/15*100)}%"></span></div><section class="screenCard ${state.screen===4?'rimeReveal':''} ${state.screen===15?'celebrate':''}">${body}</section></main>`}
 function nextButton(next,label='Continue'){return `<div class="footerActions"><button class="primary" data-next="${next}">${label} →</button></div>`}
 function startCasePrompt(){return `<div class="footerActions startCasePrompt"><span class="startCaseArrow" aria-hidden="true">➜</span><button class="primary startCaseButton" data-next="2">Start the Case</button></div>`}
 function wordCards(words,highlight=false){return `<div class="wordRow">${words.map(w=>{if(!highlight)return`<div class="word">${w}</div>`;const e=ending();if(!w.toLowerCase().endsWith(e.toLowerCase()))return`<div class="word">${w}</div>`;const o=w.slice(0,-e.length),r=w.slice(-e.length);return`<div class="word rimeWord">${o}<mark data-rime="${r.toLowerCase()}">${r}</mark></div>`}).join('')}</div>`}
@@ -135,8 +144,40 @@ function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="s
   return lessonFrame(`${tag(15)}<div class="bigReward">🎉🔎</div><h1>Case solved!</h1><p>You discovered the <strong>${l.pattern}</strong> pattern.</p><div class="choiceRow"><span class="pill coin">🪙 +10 coins</span><span class="badge">🏅 Pattern Detective Badge</span><span class="pill">⭐ 10 stars</span></div><button class="primary" data-collect>Collect rewards</button>`)
 }
 
-function soundWords(){const l=lesson();return l.pattern==='-it'?['sit','pit','fit','hit']:l.words.filter(onset)}
-function renderSoundLab(){const ws=soundWords(),from=ws[state.soundDrill%ws.length],to=ws[(state.soundDrill+1)%ws.length];return `<span class="screenTag">BONUS SOUND LAB · DRILL ${state.soundDrill+1} OF 5</span><h1>Change the first sound</h1><p>Keep the <strong>${lesson().pattern}</strong> rime.</p><div class="soundLab"><p>Say <strong>${from}</strong>. Then say ${from}, but instead of</p><div class="swap">/${onset(from)}/ → /${onset(to)}/</div><div class="timer"><b>3</b><span>Your turn: say the new word.</span></div><div class="word">${to}</div></div><button class="primary" data-soundnext>${state.soundDrill===4?'Continue to Screen 5':'Next sound drill'}</button>`}
+function soundWords(){
+  const l=lesson();
+  if(l.pattern==='-it')return ['sit','pit','fit','hit'];
+  if(l.pattern==='-is')return ['is','his'];
+  if(l.pattern==='-as')return ['as','has'];
+  return l.words.filter(onset);
+}
+function normalizedPhoneme(letter){return letter==='c'?'k':letter}
+function soundPhonemeParts(word){
+  const lower=word.toLowerCase(),spellingRime=ending().toLowerCase(),beginning=lower.slice(0,-spellingRime.length);
+  const onsetPhonemes=[...beginning].map(normalizedPhoneme);
+  const specialRimes={is:['i','z'],his:['i','z'],as:['a','z'],has:['a','z']};
+  const tail=spellingRime.slice(1);
+  const rimePhonemes=specialRimes[lower]||[spellingRime[0],...(tail==='x'?['k','s']:tail?[normalizedPhoneme(tail[0])]:[])];
+  return {onset:onsetPhonemes,rime:rimePhonemes,all:[...onsetPhonemes,...rimePhonemes]};
+}
+function currentSoundPair(){
+  const words=soundWords(),index=state.soundDrill%words.length;
+  return {from:words[index],to:words[(index+1)%words.length]};
+}
+function soundNotation(phonemes){return phonemes.join('')}
+function soundLabNarration(from,to){
+  const source=soundNotation(soundPhonemeParts(from).onset),target=soundNotation(soundPhonemeParts(to).onset);
+  if(source&&target)return {first:`Say ${from}.`,change:`Say ${from}, but instead of /${source}/, say /${target}/.`,result:`${to}. If you say ${from} but instead of /${source}/, say /${target}/, the new word will be ${to}.`};
+  if(!source&&target)return {first:`Say ${from}.`,change:`Say ${from}, but add /${target}/ at the beginning.`,result:`${to}. If you say ${from} and add /${target}/ at the beginning, the new word will be ${to}.`};
+  return {first:`Say ${from}.`,change:`Say ${from}, but take away /${source}/ at the beginning.`,result:`${to}. If you say ${from} and take away /${source}/ at the beginning, the new word will be ${to}.`};
+}
+function soundCircleMarkup(count,type,changedCount=0){return Array.from({length:count},(_,index)=>`<span class="phonemeCircle ${index<changedCount?'changed':''}" data-${type}-circle aria-hidden="true"></span>`).join('')}
+function renderSoundLab(){
+  const {from,to}=currentSoundPair(),source=soundPhonemeParts(from),target=soundPhonemeParts(to),lines=soundLabNarration(from,to);
+  const beginningLabel=!source.onset.length?'A beginning sound will be added':source.onset.length===1?'The beginning sound will change':'The beginning sounds will change';
+  const visualLabel=`${source.all.length} red sound circles. ${beginningLabel}, and the ending sound circles will stay in place.`;
+  return `<span class="screenTag">BONUS SOUND LAB · DRILL ${state.soundDrill+1} OF 5</span><h1 class="soundLabTitle">Sound Circles</h1><div class="soundLab" data-sound-lab-root><p class="soundLabIntro">Listen and watch the sound circles change.</p><div class="soundCircleStage" data-sound-circle-stage data-source-count="${source.all.length}" data-target-count="${target.all.length}" data-target-onset-count="${target.onset.length}" role="img" aria-label="${visualLabel}"><div class="soundCircleRow source" aria-hidden="true">${soundCircleMarkup(source.all.length,'source')}</div><div class="soundCircleRow target" aria-hidden="true">${soundCircleMarkup(target.all.length,'target',target.onset.length)}</div></div><span class="soundResultArrow" data-sound-result-arrow aria-hidden="true"></span><span class="visuallyHidden">Audio directions: ${lines.first} ${lines.change} ${lines.result}</span><p class="soundLabStatus" data-sound-lab-status aria-live="polite">Listen carefully.</p></div><div class="footerActions"><button class="primary" data-soundnext>${state.soundDrill===4?'Continue to Screen 5':'Next sound drill'}</button></div>`;
+}
 
 function startScreenTwoSequence(){
   stopNarration();
@@ -227,11 +268,65 @@ function startScreenFourSequence(){
   speakStage(rime,`Rime: ${rime}`,()=>speakLetter(0),.68,350);
 }
 
+function startSoundLabSequence(){
+  stopNarration();
+  const run=++soundLabRun,lessonIndex=state.lesson,drillIndex=state.soundDrill,{from,to}=currentSoundPair(),source=soundPhonemeParts(from),target=soundPhonemeParts(to),lines=soundLabNarration(from,to);
+  const root=document.querySelector('[data-sound-lab-root]');
+  if(state.view!=='lesson'||state.screen!=='sound'||!root)return;
+  soundLabRoot=root;
+  const stage=root.querySelector('[data-sound-circle-stage]'),arrow=root.querySelector('[data-sound-result-arrow]'),status=root.querySelector('[data-sound-lab-status]');
+  if(!stage||!arrow||!status)return;
+  stage.classList.remove('transformed');
+  arrow.classList.remove('slide');
+  status.textContent='Listen carefully.';
+  const isCurrent=()=>run===soundLabRun&&state.view==='lesson'&&state.screen==='sound'&&state.lesson===lessonIndex&&state.soundDrill===drillIndex&&root.isConnected;
+  const wait=(next,delay)=>{soundLabTimer=setTimeout(()=>{if(isCurrent())next()},delay)};
+  const fail=()=>{
+    if(!isCurrent())return;
+    arrow.classList.remove('slide');
+    status.textContent='Narration is unavailable. Select Play to try again, or continue to the next drill.';
+    toast('Narration is unavailable. You can use Play or continue.');
+  };
+  const sayResult=()=>{
+    if(!isCurrent())return;
+    speak(lines.result,.76,{
+      onStart:()=>{if(!isCurrent())return;status.textContent='Blend the sounds into the new word.';arrow.classList.add('slide')},
+      onComplete:(result={})=>{if(!isCurrent())return;if(result.error||result.unavailable){fail();return}status.textContent='Sound switch solved!'}
+    });
+  };
+  const sayChange=()=>{
+    if(!isCurrent())return;
+    const listeningStatus=!target.onset.length?'Listen as the beginning sound is removed.':!source.onset.length?'Listen for the added beginning sound.':target.onset.length>1?'Listen for the new beginning sounds.':'Listen for the new beginning sound.';
+    speak(lines.change,.74,{
+      onStart:()=>{if(isCurrent())status.textContent=listeningStatus},
+      onComplete:(result={})=>{
+        if(!isCurrent())return;
+        if(result.error||result.unavailable){fail();return}
+        stage.classList.add('transformed');
+        const changeSummary=target.onset.length?`${target.onset.length} changed beginning sound ${target.onset.length===1?'circle is':'circles are'} yellow`:'The beginning sound circle was removed';
+        stage.setAttribute('aria-label',`${target.all.length} sound circles. ${changeSummary}, and the ending sound circles are red.`);
+        status.textContent=!source.onset.length?'A beginning sound was added.':!target.onset.length?'The beginning sound was removed.':source.onset.length>1||target.onset.length>1?'The beginning sounds changed.':'The beginning sound changed.';
+        wait(sayResult,SOUND_LAB_SWITCH_PAUSE_MS);
+      }
+    });
+  };
+  speak(lines.first,.72,{
+    onStart:()=>{if(isCurrent())status.textContent='Listen to the word.'},
+    onComplete:(result={})=>{
+      if(!isCurrent())return;
+      if(result.error||result.unavailable){fail();return}
+      status.textContent='Get ready to change the beginning sound.';
+      wait(sayChange,SOUND_LAB_FIRST_PAUSE_MS);
+    }
+  });
+}
+
 function startAutomaticLessonSequence(){
   if(state.view!=='lesson')return;
   if(state.screen===2)startScreenTwoSequence();
   else if(state.screen===3)startScreenThreeSequence();
   else if(state.screen===4)startScreenFourSequence();
+  else if(state.screen==='sound')startSoundLabSequence();
 }
 
 function goToLessonScreen(next){
@@ -249,7 +344,7 @@ function bind(){
   document.querySelectorAll('[data-next]').forEach(x=>x.onclick=()=>goToLessonScreen(x.dataset.next));
   document.querySelectorAll('[data-speak]').forEach(x=>x.onclick=()=>speak(x.dataset.speak));
   document.querySelectorAll('[data-play-word-sequence]').forEach(x=>x.onclick=()=>startScreenTwoSequence());
-  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else if(state.screen===4)startScreenFourSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
+  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else if(state.screen===4)startScreenFourSequence();else if(state.screen==='sound')startSoundLabSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
   document.querySelectorAll('[data-correct]').forEach(x=>x.onclick=()=>{toast('Correct clue! ⭐');setTimeout(()=>{state.screen=6;render()},500)});
   document.querySelectorAll('[data-wrong]').forEach(x=>x.onclick=()=>toast('Look at the ending and try again.'));
   document.querySelectorAll('[data-build]').forEach(x=>x.onclick=()=>{toast(`${lesson().words[+x.dataset.build]} — clue built!`) });
@@ -259,7 +354,7 @@ function bind(){
   document.querySelectorAll('[data-checkspell]').forEach(x=>x.onclick=()=>{if(state.spellAnswer===x.dataset.checkspell){toast('Spelling solved! ⭐');state.spellAnswer='';state.spellIndex++;if(state.spellIndex>=3){state.screen=12;state.spellIndex=0}render()}else toast('Listen to each sound and try again.')});
   document.querySelectorAll('[data-hunt]').forEach(x=>x.onclick=()=>{const w=x.dataset.hunt;if(w.toLowerCase().endsWith(ending())&&!state.hunt.includes(w)){state.hunt.push(w);toast('Pattern clue found!')}else if(!w.toLowerCase().endsWith(ending()))toast('That word belongs to another case.');render()});
   document.querySelectorAll('[data-mastered]').forEach(x=>x.onclick=()=>{state.mastery++;if(state.mastery>=10){state.screen=15;state.mastery=0}render()});
-  document.querySelectorAll('[data-soundnext]').forEach(x=>x.onclick=()=>{state.soundDrill++;if(state.soundDrill>=5){state.screen=5;state.soundDrill=0}render()});
+  document.querySelectorAll('[data-soundnext]').forEach(x=>x.onclick=()=>{stopNarration();state.soundDrill++;if(state.soundDrill>=5){state.screen=5;state.soundDrill=0;render();return}render();startSoundLabSequence()});
   document.querySelectorAll('[data-collect]').forEach(x=>x.onclick=()=>{if(!state.completed.includes(state.lesson)){state.completed.push(state.lesson);state.coins+=10}save();toast('10 coins added to your case wallet!');setTimeout(()=>{state.lesson=Math.min(state.lesson+1,LESSONS.length-1);state.view='home';render()},700)});
   document.querySelectorAll('[data-avatar]').forEach(x=>x.onclick=()=>{state.avatar=+x.dataset.avatar;save();render()});
   document.querySelectorAll('[data-buy]').forEach(x=>x.onclick=()=>{const i=+x.dataset.buy,cost=SHOP[i][2];if(state.coins<cost)return toast('Solve more cases to earn coins.');state.coins-=cost;state.owned.push(i);save();toast(`${SHOP[i][1]} added to your collection!`);render()});
