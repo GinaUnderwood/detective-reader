@@ -47,6 +47,8 @@ h1,h2,h3,p{margin-top:0}
 .word mark{background:#dcecff;color:#285f9c;border-radius:8px;padding:4px}
 .choice{border:2px solid var(--line);border-radius:15px;background:white;padding:18px 24px;font-size:25px;font-weight:900}
 .choice:hover,.choice.selected{border-color:var(--green);background:#e8f6f1}
+.choice:disabled{cursor:wait;opacity:.55}
+.choice:disabled:hover{border-color:var(--line);background:white}
 .clue{border-left:5px solid var(--gold);background:#fff6e5;border-radius:10px;padding:14px 18px;text-align:left;max-width:700px;line-height:1.55}
 .sentence{width:min(760px,100%);text-align:left;padding:15px 18px;border-bottom:1px solid var(--line);font-size:20px}
 .story{max-width:700px;text-align:left;font-size:20px;line-height:1.8;background:white;border:1px solid var(--line);border-radius:16px;padding:26px}
@@ -77,6 +79,7 @@ h1,h2,h3,p{margin-top:0}
 .rimeReveal h1 mark{white-space:nowrap}
 .rimeReveal .rimeWord mark{background:#ffe58f;color:#174d43;border:2px solid #e4a83d;box-shadow:0 0 0 5px rgba(228,168,61,.14);animation:rimeGlow 1s ease-in-out 2}
 .rimeSequenceStatus{min-height:46px;display:flex;align-items:center;justify-content:center;margin:0;padding:10px 16px;border-radius:12px;background:#edf7f3;color:var(--green2);font-weight:900}
+.screenFourQuestion{min-height:50px;max-width:640px;display:flex;align-items:center;justify-content:center;margin:0;padding:10px 16px;border-radius:12px;background:#edf7f3;color:var(--green2);font-size:20px;font-weight:900}
 .revealContinuePrompt{align-items:center;justify-content:center;gap:14px}
 .revealContinueArrow{width:46px;color:var(--gold);font-size:40px;font-weight:900;line-height:1;opacity:0;visibility:hidden;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(122,83,18,.22))}
 .revealContinuePrompt.ready .revealContinueArrow{visibility:visible;animation:continuePoint .65s ease-in-out infinite alternate,continueFlash 1s ease-in-out infinite}

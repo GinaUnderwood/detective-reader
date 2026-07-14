@@ -14,12 +14,14 @@ function ending(){return lesson().pattern.slice(1)}
 function onset(word){return word.slice(0,-ending().length).toLowerCase()}
 const FEMALE_NARRATOR_PRIORITIES=['Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)','Microsoft Ava Online (Natural)','Microsoft Emma Multilingual Online (Natural)','Microsoft Aria','Microsoft Jenny','Microsoft Ava','Microsoft Emma','Google UK English Female','Google US English','Samantha','Ava','Emma','Allison','Zira','Victoria','Karen','Moira','Tessa','Fiona','Libby','Sonia','Hazel','Susan','Serena','Kate','Veena','Joanna','Kendra','Kimberly','Ivy','Salli'];
 let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer=null,activeNarrationTimer=null,narratorUnavailable=false;
-let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null,screenThreeRoot=null;
+let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null,screenThreeRoot=null,screenFourRun=0,screenFourTimer=null;
 const SCREEN_ONE_NARRATION='Welcome Pattern Detective. Your next case is ready for you to solve.';
 const SCREEN_TWO_NARRATION='Listen carefully. What do these words have in common?';
 const SCREEN_THREE_COMPLIMENTS=['Nice job!','Congratulations!','That is first-class work!'];
 const SCREEN_THREE_CONFETTI_MS=3000;
-const SCREEN_THREE_WORD_INTRO="Let's read these words together.";
+const SCREEN_THREE_ENDING_NARRATION='Their ending sound is the same.';
+const SCREEN_FOUR_INTRO="Let's keep reading.";
+const SCREEN_FOUR_QUESTION='What part of the word stays the same? Click on the part.';
 function chooseNarratorVoice(voices){
   const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
   if(!english.length)return null;
@@ -73,8 +75,10 @@ function speak(text,rate=.78,callbacks={}){
 function stopNarration(){
   screenTwoRun++;
   screenThreeRun++;
+  screenFourRun++;
   clearTimeout(screenTwoTimer);
   clearTimeout(screenThreeTimer);
+  clearTimeout(screenFourTimer);
   if(screenThreeRoot?.isConnected){
     screenThreeRoot.querySelector('[data-screen-three-confetti]')?.classList.remove('active');
     screenThreeRoot.querySelector('[data-screen-three-prompt]')?.classList.remove('ready','fallback');
@@ -115,8 +119,8 @@ function screenThreeContinuePrompt(){return `<div class="footerActions revealCon
 function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="screenTag">SCREEN ${n} OF ${screenNames.length} · ${screenNames[n-1]}</span>`;
   if(s===1)return lessonFrame(`${tag(1)}<div class="bigReward">🕵️</div><h1>Welcome, Pattern Detective!</h1><p>Your next case is the <strong>${l.pattern}</strong> word family.</p>${startCasePrompt()}`);
   if(s===2)return lessonFrame(`${tag(2)}<h1>Listen carefully.</h1><p class="screenTwoQuestion">What do these words have in common?</p>${flashWordCards(l.words)}<p class="clue">Watch each word flash as you hear it.</p><div class="footerActions"><button class="secondary hearWordsButton" data-play-word-sequence aria-label="Hear the Words again"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-next="3">I listened →</button></div>`);
-  if(s===3)return lessonFrame(`${screenThreeConfetti()}${tag(3)}<h1>They all end with <mark>${l.pattern}</mark>.</h1>${wordCards(l.words,true)}<p class="clue">The beginning changes. The ${l.pattern} rime stays the same.</p><p class="rimeSequenceStatus" data-screen-three-status aria-live="polite">Listen to the rime, then read the words together.</p>${screenThreeContinuePrompt()}`);
-  if(s===4)return lessonFrame(`${tag(4)}<h1>More examples</h1>${wordCards(l.words)}<p>What part stays the same?</p><div class="choiceRow"><button class="choice" data-correct>${l.pattern}</button><button class="choice" data-wrong>-at</button><button class="choice" data-wrong>-op</button></div>`);
+  if(s===3)return lessonFrame(`${screenThreeConfetti()}${tag(3)}<h1>They all end with <mark>${l.pattern}</mark>.</h1>${wordCards(l.words,true)}<p class="clue">The beginning changes. The ${l.pattern} rime stays the same.</p><p class="rimeSequenceStatus" data-screen-three-status aria-live="polite">Their ending sound is the same. Listen to the words.</p>${screenThreeContinuePrompt()}`);
+  if(s===4){const distractors=['-at','-op','-it'].filter(pattern=>pattern!==l.pattern).slice(0,2);return lessonFrame(`${tag(4)}<h1>More examples</h1>${wordCards(l.words)}<p class="screenFourQuestion" data-screen-four-status aria-live="polite">${SCREEN_FOUR_INTRO}</p><div class="choiceRow"><button class="choice" data-screen-four-choice data-correct disabled>${l.pattern}</button>${distractors.map(pattern=>`<button class="choice" data-screen-four-choice data-wrong disabled>${pattern}</button>`).join('')}</div>`)}
   if(s===5){const os=l.words.map(onset);return lessonFrame(`${tag(5)}<h1>Build the pattern</h1><div class="word">_ ${ending()}</div><p>Choose a beginning sound and build a word.</p><div class="choiceRow">${os.map((o,i)=>`<button class="choice" data-build="${i}">${o||'∅'}</button>`).join('')}</div><div class="clue">Every onset snaps onto the ${l.pattern} rime.</div>${nextButton(6)}`)}
   if(s===6)return lessonFrame(`${tag(6)}<h1>Read each word.</h1><div class="word">${l.words[state.readIndex%l.words.length]}</div><p>${state.readIndex+1} of 6</p><div class="footerActions"><button class="secondary" data-speak="${l.words[state.readIndex%l.words.length]}">🔊 Tap sounds</button><button class="primary" data-read>✓ I read it</button></div>`);
   if(s===7)return lessonFrame(`${tag(7)}<h1>Build fluency</h1><p>Read these as smoothly as you can.</p>${wordCards([...l.words,...l.words])}<span class="badge">⏱ Accuracy and rate recorded in production</span>${nextButton(8,'Done reading')}`);
@@ -149,7 +153,7 @@ function startScreenTwoSequence(){
 
 function startScreenThreeSequence(){
   stopNarration();
-  const run=++screenThreeRun,lessonIndex=state.lesson,rime=ending(),words=[...lesson().words],compliment=SCREEN_THREE_COMPLIMENTS[state.lesson%SCREEN_THREE_COMPLIMENTS.length];
+  const run=++screenThreeRun,lessonIndex=state.lesson,words=[...lesson().words],compliment=SCREEN_THREE_COMPLIMENTS[state.lesson%SCREEN_THREE_COMPLIMENTS.length];
   const root=document.querySelector('.rimeReveal');
   if(state.view!=='lesson'||state.screen!==3||!root)return;
   screenThreeRoot=root;
@@ -157,7 +161,7 @@ function startScreenThreeSequence(){
   if(!confetti||!prompt||!status)return;
   confetti.classList.remove('active');
   prompt.classList.remove('ready','fallback');
-  status.textContent='Listen to the rime, then read the words together.';
+  status.textContent='Their ending sound is the same. Listen to the words.';
   const isCurrent=()=>run===screenThreeRun&&state.view==='lesson'&&state.screen===3&&state.lesson===lessonIndex&&root.isConnected;
   const wait=(next,delay)=>{screenThreeTimer=setTimeout(()=>{if(isCurrent())next()},delay)};
   const fail=()=>{
@@ -194,8 +198,36 @@ function startScreenThreeSequence(){
     const word=words[index];
     speakStage(word,`Word ${index+1}: ${word}`,()=>readWord(index+1),.68,350);
   };
-  const introduceWords=()=>speakStage(SCREEN_THREE_WORD_INTRO,SCREEN_THREE_WORD_INTRO,()=>readWord(0),.78,400);
-  speakStage(rime,`Rime: ${rime}`,introduceWords,.68,350);
+  speakStage(SCREEN_THREE_ENDING_NARRATION,SCREEN_THREE_ENDING_NARRATION,()=>readWord(0),.78,400);
+}
+
+function startScreenFourSequence(){
+  stopNarration();
+  const run=++screenFourRun,lessonIndex=state.lesson,words=[...lesson().words];
+  const status=document.querySelector('[data-screen-four-status]'),choices=[...document.querySelectorAll('[data-screen-four-choice]')];
+  if(state.view!=='lesson'||state.screen!==4||!status||choices.length!==3)return;
+  choices.forEach(choice=>choice.disabled=true);
+  status.textContent=SCREEN_FOUR_INTRO;
+  const isCurrent=()=>run===screenFourRun&&state.view==='lesson'&&state.screen===4&&state.lesson===lessonIndex&&status.isConnected;
+  const wait=(next,delay)=>{screenFourTimer=setTimeout(()=>{if(isCurrent())next()},delay)};
+  const enableChoices=()=>{choices.forEach(choice=>choice.disabled=false)};
+  const fail=()=>{if(!isCurrent())return;status.textContent=SCREEN_FOUR_QUESTION;enableChoices();toast('Narration is unavailable. Read the words, then click the part that stays the same.')};
+  const speakStage=(text,label,next=null,rate=.72,pause=350)=>{
+    if(!isCurrent())return;
+    status.textContent=label;
+    speak(text,rate,{onComplete:(result={})=>{
+      if(!isCurrent())return;
+      if(result.error||result.unavailable){fail();return}
+      if(next)wait(next,pause);
+    }});
+  };
+  const finishQuestion=()=>{if(!isCurrent())return;status.textContent=SCREEN_FOUR_QUESTION;enableChoices()};
+  const askQuestion=()=>speakStage(SCREEN_FOUR_QUESTION,SCREEN_FOUR_QUESTION,finishQuestion,.78,0);
+  const readWord=(index)=>{
+    if(index>=words.length){askQuestion();return}
+    speakStage(words[index],`Word ${index+1}: ${words[index]}`,()=>readWord(index+1),.68,350);
+  };
+  speakStage(SCREEN_FOUR_INTRO,SCREEN_FOUR_INTRO,()=>readWord(0),.78,400);
 }
 
 function startAutomaticLessonSequence(){
@@ -203,6 +235,7 @@ function startAutomaticLessonSequence(){
   if(state.screen===1)speak(SCREEN_ONE_NARRATION);
   else if(state.screen===2)startScreenTwoSequence();
   else if(state.screen===3)startScreenThreeSequence();
+  else if(state.screen===4)startScreenFourSequence();
 }
 
 function goToLessonScreen(next){
@@ -231,7 +264,7 @@ function bind(){
   document.querySelectorAll('[data-next]').forEach(x=>x.onclick=()=>goToLessonScreen(x.dataset.next));
   document.querySelectorAll('[data-speak]').forEach(x=>x.onclick=()=>speak(x.dataset.speak));
   document.querySelectorAll('[data-play-word-sequence]').forEach(x=>x.onclick=()=>startScreenTwoSequence());
-  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
+  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else if(state.screen===4)startScreenFourSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
   document.querySelectorAll('[data-correct]').forEach(x=>x.onclick=()=>{const lessonIndex=state.lesson;toast('Correct clue! ⭐');setTimeout(()=>{if(state.view==='lesson'&&state.screen===4&&state.lesson===lessonIndex)goToLessonScreen(5)},500)});
   document.querySelectorAll('[data-wrong]').forEach(x=>x.onclick=()=>toast('Look at the ending and try again.'));
   document.querySelectorAll('[data-build]').forEach(x=>x.onclick=()=>{toast(`${lesson().words[+x.dataset.build]} — clue built!`) });
