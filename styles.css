@@ -55,9 +55,10 @@ h1,h2,h3,p{margin-top:0}
 .clue{border-left:5px solid var(--gold);background:#fff6e5;border-radius:10px;padding:14px 18px;text-align:left;max-width:700px;line-height:1.55}
 .sentenceList{width:min(760px,100%)}
 .sentence{width:100%;text-align:left;padding:15px 18px;border-bottom:1px solid var(--line);font-size:20px;line-height:1.8}
-.sentenceWord{border-radius:6px;padding:2px 3px;margin:0 -3px;transition:background .12s ease,color .12s ease,box-shadow .12s ease}
-.sentenceWord.active{background:#ffe58f;color:#174d43;box-shadow:0 0 0 3px rgba(228,168,61,.28);font-weight:900}
+.sentenceWord,.storyWord{border-radius:6px;padding:2px 3px;margin:0 -3px;transition:background .12s ease,color .12s ease,box-shadow .12s ease}
+.sentenceWord.active,.storyWord.active{background:#ffe58f;color:#174d43;box-shadow:0 0 0 3px rgba(228,168,61,.28);font-weight:900}
 .screenEightStatus{min-height:26px;margin:14px 0 0;color:var(--green2);font-weight:900}
+.screenNineStatus{min-height:26px;margin:14px 0 0;color:var(--green2);font-weight:900}
 .story{max-width:700px;text-align:left;font-size:20px;line-height:1.8;background:white;border:1px solid var(--line);border-radius:16px;padding:26px}
 .story p:last-child{margin-bottom:0}
 .footerActions{margin-top:auto;display:flex;gap:10px;padding-top:25px}
@@ -119,7 +120,7 @@ h1,h2,h3,p{margin-top:0}
 @media(prefers-reduced-motion:reduce){
   .startCaseArrow,.flashWord.active,.screenFourWord.active,.rimeReveal .rimeWord mark,.revealContinuePrompt.ready .revealContinueArrow,.confettiLayer.active .confettiPiece{animation:none}
   .flashWord,.screenFourWord{transition:none}
-  .sentenceWord{transition:none}
+  .sentenceWord,.storyWord{transition:none}
   .flashWord.active,.screenFourWord.active{transform:scale(1.03)}
   .revealContinuePrompt.ready .revealContinueArrow{opacity:1;visibility:visible;transform:none}
   .confettiLayer.active .confettiPiece{top:12%;opacity:.85;transform:none}

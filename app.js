@@ -211,6 +211,7 @@ let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer
 let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null,screenThreeRoot=null,screenFourRun=0,screenFourTimer=null,screenFourRoot=null;
 let screenSevenRun=0,screenSevenTimer=null,screenSevenRoot=null;
 let screenEightRun=0,screenEightTimer=null,screenEightRoot=null;
+let screenNineRun=0,screenNineTimer=null,screenNineRoot=null;
 const SCREEN_ONE_NARRATION='Welcome Pattern Detective. Your next case is ready for you to solve.';
 const SCREEN_TWO_NARRATION='Listen carefully. What do these words have in common?';
 const SCREEN_THREE_CONFETTI_MS=3000;
@@ -224,6 +225,7 @@ const SCREEN_SEVEN_NARRATION='As smoothly as you can, Read all these words.';
 const SCREEN_SEVEN_CONFETTI_MS=3000;
 const SCREEN_EIGHT_NARRATION='Now, read these sentences.';
 const SCREEN_EIGHT_CONFETTI_MS=3000;
+const SCREEN_NINE_NARRATION='Next, read the story.';
 function chooseNarratorVoice(voices){
   const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
   if(!english.length)return null;
@@ -280,11 +282,13 @@ function stopNarration(){
   screenFourRun++;
   screenSevenRun++;
   screenEightRun++;
+  screenNineRun++;
   clearTimeout(screenTwoTimer);
   clearTimeout(screenThreeTimer);
   clearTimeout(screenFourTimer);
   clearTimeout(screenSevenTimer);
   clearTimeout(screenEightTimer);
+  clearTimeout(screenNineTimer);
   if(screenThreeRoot?.isConnected){
     screenThreeRoot.querySelector('[data-screen-three-confetti]')?.classList.remove('active');
     screenThreeRoot.querySelector('[data-screen-three-prompt]')?.classList.remove('ready','fallback');
@@ -308,10 +312,16 @@ function stopNarration(){
     const status=screenEightRoot.querySelector('[data-screen-eight-status]');
     if(status)status.textContent='';
   }
+  if(screenNineRoot?.isConnected){
+    screenNineRoot.querySelectorAll('[data-screen-nine-word].active').forEach(word=>word.classList.remove('active'));
+    const status=screenNineRoot.querySelector('[data-screen-nine-status]');
+    if(status)status.textContent='';
+  }
   screenThreeRoot=null;
   screenFourRoot=null;
   screenSevenRoot=null;
   screenEightRoot=null;
+  screenNineRoot=null;
   pendingNarration=null;
   activeNarration=null;
   clearTimeout(voiceWaitTimer);
@@ -337,7 +347,7 @@ function renderRewards(){return `<span class="eyebrow">Detective profile</span><
 function renderProgress(){const accuracy=state.completed.length?'92%':'—';return `<span class="eyebrow">Grown-up view</span><h1>Reading Progress</h1><div class="grid"><article class="card"><h2>${state.completed.length}</h2><p>Lessons completed</p></article><article class="card"><h2>${state.completed.length*10}</h2><p>Words practiced</p></article><article class="card"><h2>${accuracy}</h2><p>Practice accuracy</p></article></div><section class="card" style="margin-top:20px"><h2>Current skill: ${lesson().pattern}</h2><p>Words to practice: ${lesson().words.join(', ')}</p><p>Progress is stored in this browser for the prototype.</p></section>`}
 
 const screenNames=['Welcome','Listen and Look','Pattern Reveal','Keep Reading','Build a Word','Read the Words','Build Fluency','Read Sentences','Story','Spelling','Pattern Hunt','Challenge','Mastery Check','Celebration'];
-function lessonFrame(body){const current=state.screen,backLabel=current===1?'Back to Case Board':`Back to Screen ${current-1}: ${screenNames[current-2]}`;return `<main class="main lessonShell"><div class="lessonHead"><button class="secondary" data-back aria-label="${backLabel}"><span aria-hidden="true">←</span> Back</button><span class="pill">Case ${state.lesson+1}: ${lesson().pattern}</span><button class="secondary" data-replay aria-label="Play this screen">🔊 Play</button></div><div class="progress"><span style="width:${Math.min(100,current/screenNames.length*100)}%"></span></div><section class="screenCard ${state.screen===3?'rimeReveal':''} ${state.screen===4?'keepReading':''} ${state.screen===7?'fluencyPractice':''} ${state.screen===8?'sentencePractice':''} ${state.screen===14?'celebrate':''}">${body}</section></main>`}
+function lessonFrame(body){const current=state.screen,backLabel=current===1?'Back to Case Board':`Back to Screen ${current-1}: ${screenNames[current-2]}`;return `<main class="main lessonShell"><div class="lessonHead"><button class="secondary" data-back aria-label="${backLabel}"><span aria-hidden="true">←</span> Back</button><span class="pill">Case ${state.lesson+1}: ${lesson().pattern}</span><button class="secondary" data-replay aria-label="Play this screen">🔊 Play</button></div><div class="progress"><span style="width:${Math.min(100,current/screenNames.length*100)}%"></span></div><section class="screenCard ${state.screen===3?'rimeReveal':''} ${state.screen===4?'keepReading':''} ${state.screen===7?'fluencyPractice':''} ${state.screen===8?'sentencePractice':''} ${state.screen===9?'storyPractice':''} ${state.screen===14?'celebrate':''}">${body}</section></main>`}
 function nextButton(next,label='Continue'){return `<div class="footerActions"><button class="primary" data-next="${next}">${label} →</button></div>`}
 function startCasePrompt(){return `<div class="footerActions startCasePrompt"><span class="startCaseArrow" aria-hidden="true">➜</span><button class="primary startCaseButton" data-next="2">Start the Case</button></div>`}
 function wordCards(words,highlight=false){return `<div class="wordRow">${words.map(w=>{if(!highlight)return`<div class="word">${w}</div>`;const e=ending();if(!w.toLowerCase().endsWith(e.toLowerCase()))return`<div class="word">${w}</div>`;const o=w.slice(0,-e.length),r=w.slice(-e.length);return`<div class="word rimeWord">${o}<mark data-rime="${r.toLowerCase()}">${r}</mark></div>`}).join('')}</div>`}
@@ -354,6 +364,18 @@ function sentenceLine(line,lineIndex){
     return `${prefix}<span class="sentenceWord" data-screen-eight-word data-spoken="${escapeHtml(spoken)}" data-sentence="${lineIndex}" data-word="${index}" data-sentence-end="${isLast}">${escapeHtml(word)}</span>`;
   }).join('');
   return `<p class="sentence" aria-label="${escapeHtml(line)}">${words}${escapeHtml(line.slice(cursor))}</p>`;
+}
+function storyLine(line,lineIndex){
+  const matches=[...line.matchAll(/[A-Za-z]+(?:['’][A-Za-z]+)*/g)];
+  let cursor=0;
+  const words=matches.map((match,index)=>{
+    const prefix=escapeHtml(line.slice(cursor,match.index));
+    const word=match[0],isLast=index===matches.length-1;
+    const spoken=word+(isLast?line.slice(match.index+word.length).trim():'');
+    cursor=match.index+word.length;
+    return `${prefix}<span class="storyWord" data-screen-nine-word data-spoken="${escapeHtml(spoken)}" data-story-line="${lineIndex}" data-word="${index}" data-sentence-end="${isLast}">${escapeHtml(word)}</span>`;
+  }).join('');
+  return `<p aria-label="${escapeHtml(line)}">${words}${escapeHtml(line.slice(cursor))}</p>`;
 }
 function flashWordCards(words){return `<div class="wordRow flashWordRow" aria-label="Words to listen for">${words.map(w=>`<div class="word flashWord" data-flash-word="${w}">${w}</div>`).join('')}</div>`}
 function screenFourWordCards(words){return `<div class="wordRow" aria-label="Words to read together">${words.map((w,i)=>`<div class="word screenFourWord" data-screen-four-word="${i}">${w}</div>`).join('')}</div>`}
@@ -372,7 +394,7 @@ function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="s
   if(s===6){const words=previousScreenWords(),word=words[state.readIndex%words.length],position=state.readIndex+1;return lessonFrame(`${tag(6)}<h1>Read each word</h1><div class="word" data-screen-six-word tabindex="-1" aria-live="polite" aria-label="Word ${position} of ${words.length}: ${word}">${word}</div><p>Word ${position} of ${words.length}</p><div class="footerActions"><button class="secondary hearWordsButton" data-speak="${word}" aria-label="Hear the word ${word}"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the word</span></button><button class="primary" data-read>I read it ✓ →</button></div>`)}
   if(s===7){const words=previousScreenWords(),allWords=`${words.join('. ')}.`;return lessonFrame(`${screenSevenConfetti()}${tag(7)}<h1>Build fluency</h1><p>Read these as smoothly as you can.</p>${fluencyWordButtons(words)}<p class="screenSevenStatus" data-screen-seven-status aria-live="polite"></p><div class="footerActions"><button class="secondary hearWordsButton" data-screen-seven-action data-speak="${allWords}" aria-label="Hear the Words"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-screen-seven-action data-screen-seven-complete>I read them ✓ →</button></div>`)}
   if(s===8){const lines=SENTENCE_SETS[state.lesson];return lessonFrame(`${screenEightConfetti()}${tag(8)}<h1>Read the sentences</h1><div class="sentenceList" aria-label="Sentences to read">${lines.map(sentenceLine).join('')}</div><p class="screenEightStatus" data-screen-eight-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-eight-action data-screen-eight-read>🔊 Read to Me</button><button class="primary" data-screen-eight-action data-screen-eight-complete>I read them ✓ →</button></div>`)}
-  if(s===9){const lines=STORY_SETS[state.lesson],story=lines.join(' ');return lessonFrame(`${tag(9)}<h1>The ${l.pattern} Case</h1><div class="story" aria-label="Decodable story">${lines.map(line=>`<p>${escapeHtml(line)}</p>`).join('')}</div><div class="footerActions"><button class="secondary" data-speak="${escapeHtml(story)}">🔊 Read to me</button><button class="primary" data-next="10">I read it →</button></div>`)}
+  if(s===9){const lines=STORY_SETS[state.lesson];return lessonFrame(`${tag(9)}<h1>The ${l.pattern} Case</h1><div class="story" aria-label="Decodable story">${lines.map(storyLine).join('')}</div><p class="screenNineStatus" data-screen-nine-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-nine-read>🔊 Read to Me</button><button class="primary" data-next="10">I read it →</button></div>`)}
   if(s===10){const target=l.words[state.spellIndex%l.words.length];return lessonFrame(`${tag(10)}<h1>Spell ${target}</h1><div class="word">${state.spellAnswer||'_'}</div><div class="tileRow">${target.split('').sort(()=>.5-Math.random()).map(ch=>`<button class="choice" data-letter="${ch}">${ch}</button>`).join('')}</div><div class="footerActions"><button class="secondary" data-clear>Clear</button><button class="primary" data-checkspell="${target}">Check spelling</button></div>`)}
   if(s===11){const distract=['cat','dog','map','sun','fan'];const words=[...l.words,...distract];return lessonFrame(`${tag(11)}<h1>Pattern hunt</h1><p>Find every ${l.pattern} word.</p><div class="choiceRow">${words.map(w=>`<button class="choice ${state.hunt.includes(w)?'selected':''}" data-hunt="${w}">${w}</button>`).join('')}</div><p>${state.hunt.length} clues found</p>${state.hunt.length>=l.words.length?nextButton(12):''}`)}
   if(s===12){const big=['ch','tr','sl','gr','dr'].map(o=>o+ending());return lessonFrame(`${tag(12)}<h1>Challenge clues</h1><p>You know ${l.pattern}. Try these bigger transfer words.</p>${wordCards(big)}<p class="clue">These are prototype transfer examples. A reading specialist should approve each final challenge list before production.</p>${nextButton(13)}`)}
@@ -587,6 +609,50 @@ function completeScreenEight(){
   },SCREEN_EIGHT_CONFETTI_MS);
 }
 
+function startScreenNineSequence(){
+  stopNarration();
+  if(state.view!=='lesson'||state.screen!==9)return;
+  speak(SCREEN_NINE_NARRATION,.78);
+}
+
+function readScreenNineStory(){
+  stopNarration();
+  const run=++screenNineRun,lessonIndex=state.lesson,root=document.querySelector('.storyPractice');
+  const words=[...root?.querySelectorAll('[data-screen-nine-word]')||[]],status=root?.querySelector('[data-screen-nine-status]');
+  if(state.view!=='lesson'||state.screen!==9||!root||!words.length||!status)return;
+  screenNineRoot=root;
+  const clearHighlights=()=>words.forEach(word=>word.classList.remove('active'));
+  const isCurrent=()=>run===screenNineRun&&state.view==='lesson'&&state.screen===9&&state.lesson===lessonIndex&&root.isConnected;
+  const fail=()=>{
+    if(!isCurrent())return;
+    clearHighlights();
+    status.textContent='Narration is unavailable. Select Read to Me to try again.';
+    toast('Narration is unavailable. You can try Read to Me again.');
+  };
+  const readWord=(index)=>{
+    if(!isCurrent())return;
+    if(index>=words.length){clearHighlights();status.textContent='You heard the story.';return}
+    const word=words[index];
+    speak(word.dataset.spoken,.7,{
+      onStart:(result={})=>{
+        if(!isCurrent()||result.unavailable)return;
+        clearHighlights();
+        word.classList.add('active');
+      },
+      onComplete:(result={})=>{
+        if(!isCurrent())return;
+        word.classList.remove('active');
+        if(result.error||result.unavailable){fail();return}
+        const pause=word.dataset.sentenceEnd==='true'?360:90;
+        screenNineTimer=setTimeout(()=>{if(isCurrent())readWord(index+1)},pause);
+      }
+    });
+  };
+  clearHighlights();
+  status.textContent='Reading aloud. Follow each highlighted word.';
+  readWord(0);
+}
+
 function completeScreenSeven(){
   stopNarration();
   const run=++screenSevenRun,lessonIndex=state.lesson,root=document.querySelector('.fluencyPractice');
@@ -615,6 +681,7 @@ function startAutomaticLessonSequence(){
   else if(state.screen===6)startScreenSixSequence();
   else if(state.screen===7)startScreenSevenSequence();
   else if(state.screen===8)startScreenEightSequence();
+  else if(state.screen===9)startScreenNineSequence();
 }
 
 function goToLessonScreen(next){
@@ -657,7 +724,7 @@ function bind(){
   document.querySelectorAll('[data-next]').forEach(x=>x.onclick=()=>goToLessonScreen(x.dataset.next));
   document.querySelectorAll('[data-speak]').forEach(x=>x.onclick=()=>speak(x.dataset.speak));
   document.querySelectorAll('[data-play-word-sequence]').forEach(x=>x.onclick=()=>startScreenTwoSequence());
-  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else if(state.screen===4)startScreenFourSequence();else if(state.screen===5)startScreenFiveSequence();else if(state.screen===6)startScreenSixSequence();else if(state.screen===7)startScreenSevenSequence();else if(state.screen===8)startScreenEightSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
+  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else if(state.screen===4)startScreenFourSequence();else if(state.screen===5)startScreenFiveSequence();else if(state.screen===6)startScreenSixSequence();else if(state.screen===7)startScreenSevenSequence();else if(state.screen===8)startScreenEightSequence();else if(state.screen===9)startScreenNineSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
   document.querySelectorAll('[data-correct]').forEach(x=>x.onclick=completeScreenFour);
   document.querySelectorAll('[data-wrong]').forEach(x=>x.onclick=()=>toast('Look at the ending and try again.'));
   document.querySelectorAll('[data-build]').forEach(x=>x.onclick=()=>buildLessonWord(+x.dataset.build));
@@ -665,6 +732,7 @@ function bind(){
   document.querySelectorAll('[data-screen-seven-complete]').forEach(x=>x.onclick=completeScreenSeven);
   document.querySelectorAll('[data-screen-eight-read]').forEach(x=>x.onclick=readScreenEightSentences);
   document.querySelectorAll('[data-screen-eight-complete]').forEach(x=>x.onclick=completeScreenEight);
+  document.querySelectorAll('[data-screen-nine-read]').forEach(x=>x.onclick=readScreenNineStory);
   document.querySelectorAll('[data-letter]').forEach(x=>x.onclick=()=>{state.spellAnswer+=x.dataset.letter;render()});
   document.querySelectorAll('[data-clear]').forEach(x=>x.onclick=()=>{state.spellAnswer='';render()});
   document.querySelectorAll('[data-checkspell]').forEach(x=>x.onclick=()=>{if(state.spellAnswer===x.dataset.checkspell){toast('Spelling solved! ⭐');state.spellAnswer='';state.spellIndex++;if(state.spellIndex>=3){state.spellIndex=0;goToLessonScreen(11);return}render()}else toast('Listen to each sound and try again.')});
