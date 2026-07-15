@@ -45,6 +45,9 @@ h1,h2,h3,p{margin-top:0}
 .wordRow,.choiceRow,.tileRow{display:flex;flex-wrap:wrap;justify-content:center;gap:15px;margin:28px 0}
 .word{min-width:145px;padding:24px;border:2px solid var(--line);border-radius:17px;background:white;font-size:38px;font-weight:900}
 .word mark{background:#dcecff;color:#285f9c;border-radius:8px;padding:4px}
+.fluencyWord{appearance:none;color:var(--ink);transition:border-color .15s ease,background .15s ease,transform .15s ease}
+.fluencyWord:hover,.fluencyWord:focus-visible{border-color:var(--green);background:#e8f6f1;outline:3px solid rgba(40,122,103,.2);outline-offset:2px}
+.fluencyWord:active{transform:translateY(1px)}
 .choice{border:2px solid var(--line);border-radius:15px;background:white;padding:18px 24px;font-size:25px;font-weight:900}
 .choice:hover,.choice.selected{border-color:var(--green);background:#e8f6f1}
 .choice:disabled{cursor:wait;opacity:.55}
