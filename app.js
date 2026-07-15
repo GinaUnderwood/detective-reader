@@ -52,6 +52,62 @@ const LESSONS=[
   ['-ull',['dull','gull','hull'],['lull','mull','skull']]
 ].map(([pattern,words,keepReadingWords])=>({pattern,words,keepReadingWords}));
 
+// Sentence practice uses only cumulative short word-family words and Dolch sight words.
+const SENTENCE_SETS=[
+  ['I sit.','It is a kit.','Hit it.'],
+  ['Sip it.','I see a rip.','This is the tip.'],
+  ['The pin is in the tin.','I win.','The fin is in the bin.'],
+  ['His sis can sit.','Is this his kit?','This is his pin.'],
+  ['The kid hid.','I see the lid.','I did this.'],
+  ['The pig is big.','I can dig.','The fig is in the bin.'],
+  ['It is dim.','I see him.','The rim is big.'],
+  ['This is a bib.','It is a fib.','I see the rib.'],
+  ['I can fix it.','I can mix it.','Fix the lid.'],
+  // Common -iff words begin with blends, so this case reviews prior CVC families.
+  ['I can fix it.','The kid can sit.','The pig is big.'],
+  ['Fill it.','The pill is in the tin.','We can sit on the hill.'],
+  ['Do not hiss.','I miss him.','The kiss is for him.'],
+  ['The cat is fat.','The hat is on the mat.','I see a bat.'],
+  ['The cap is in my lap.','Tap the map.','I can nap.'],
+  ['The man ran.','I see the fan.','I can tap the pan.'],
+  ['It is as big as a pig.','The man has a hat.','The can has gas.'],
+  ['My dad had a map.','The kid is mad.','This is a bad hat.'],
+  ['The bag has a tag.','I see the rag.','The pig can wag.'],
+  ['The ham is in the pan.','I see the jam.','The ram is mad.'],
+  ['I see the wax.','The wax is on the lid.','Six is the max.'],
+  ['The cab is at the lab.','Dab the jam.','The can has a tab.'],
+  ['The pot is hot.','I see a dot.','The cat is on the cot.'],
+  ['I can hop.','The mop is in the pot.','I see the cop.'],
+  ['The hat is on the cot.','The cap is on the mat.','The lid is on the pot.'],
+  ['I can nod.','The cod is in the pot.','The pod is in the bag.'],
+  ['The dog can jog.','The hog is in the fog.','I see a log.'],
+  ['My mom can jog.','The dog is with my mom.','My mom can see the hog.'],
+  ['The cob is in the bag.','It is my job.','Do not sob.'],
+  ['The fox is in the box.','I see the fox.','The box is big.'],
+  ['The hat is off.','The cat is off the mat.','The lid is off the pot.'],
+  ['The moss is on the log.','Toss the cap to me.','The boss has a hat.'],
+  ['I can get the net.','The pet is on the mat.','Let the pet sit.'],
+  ['The pet has pep.','The dog can hop.','The pet can nap.'],
+  ['The hen is in the pen.','Ten men can sit.','The fox is in the den.'],
+  ['The red hat is on the bed.','I fed the hen.','The dog led the man.'],
+  ['The dog can beg.','My leg is on the bed.','I see a peg.'],
+  ['The hem is red.','The gem is in the bag.','I see the gem.'],
+  ['I see a web.','The web is on the box.','The web is in the den.'],
+  ['The bell fell.','Tell me.','Do not yell.'],
+  ['This is a mess.','I have less jam.','The mess is on the mat.'],
+  ['The hut is big.','Cut the ham.','The nut is in the bag.'],
+  ['The cup is on the mat.','The pup can sit.','The pup is up.'],
+  ['The bun is hot.','We can run.','The sun is up.'],
+  ['The bus is big.','The bus can go.','Come with us on the bus.'],
+  ['The bug is on the rug.','I can hug the pup.','The mug is on the mat.'],
+  ['The bud is red.','The pig is in the mud.','The bud is in the mud.'],
+  ['I can hum.','The sum is ten.','I have gum.'],
+  ['The cub is in the den.','Rub the leg.','The mug is in the tub.'],
+  ['The cuff is red.','The pup can huff.','I see a puff of fog.'],
+  ['The gull is on the hull.','The hull is red.','The hull is dull.']
+];
+if(SENTENCE_SETS.length!==LESSONS.length)throw new Error('Every lesson needs a sentence set.');
+
 const AVATARS=[['🦉','Owl Investigator'],['🦊','Fox Detective'],['🐱','Clue Cat'],['🤖','Robo Reader']];
 const SHOP=[['🎩','Detective Hat',40],['🔎','Golden Magnifier',50],['📓','Secret Notebook',35],['🧥','Mystery Cape',60],['🗺️','Treasure Map',45],['🧰','Clue Kit',55],['🏠','Treehouse Office',90],['🚲','Case Cruiser',75]];
 const saved=JSON.parse(localStorage.getItem('detectiveReader')||'{}');
@@ -204,7 +260,7 @@ function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="s
   if(s===5){const words=screenFiveWords(),os=words.map(onset),hasBuilt=Number.isInteger(state.buildIndex)&&state.buildIndex>=0&&state.buildIndex<words.length,builtWord=hasBuilt?words[state.buildIndex]:'',rime=ending(),builtOnset=hasBuilt?builtWord.slice(0,-rime.length):'',builtRime=hasBuilt?builtWord.slice(-rime.length):rime;return lessonFrame(`${tag(5)}<h1>Build a Word</h1><div class="word buildWordBox ${hasBuilt?'built':''}" data-built-word aria-live="polite" aria-label="${hasBuilt?`Built word: ${builtWord}`:`Word building box for ${l.pattern}; beginning blank`}"><span class="buildOnset">${builtOnset}</span><span class="buildRime">${builtRime}</span></div><p class="buildInstruction" data-screen-five-status aria-live="polite">${hasBuilt?`You built ${builtWord}. Listen to the word.`:SCREEN_FIVE_NARRATION}</p><div class="choiceRow" aria-label="Beginning choices">${os.map((o,i)=>`<button class="choice buildChoice ${state.buildIndex===i?'selected':''}" data-build="${i}" aria-pressed="${state.buildIndex===i}" aria-label="Beginning ${o}">${o}</button>`).join('')}</div><div class="clue">Choose a beginning. It will join the ${l.pattern} rime to make a complete word.</div>${nextButton(6)}`)}
   if(s===6){const words=previousScreenWords(),word=words[state.readIndex%words.length],position=state.readIndex+1;return lessonFrame(`${tag(6)}<h1>Read each word</h1><div class="word" data-screen-six-word tabindex="-1" aria-live="polite" aria-label="Word ${position} of ${words.length}: ${word}">${word}</div><p>Word ${position} of ${words.length}</p><div class="footerActions"><button class="secondary hearWordsButton" data-speak="${word}" aria-label="Hear the word ${word}"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the word</span></button><button class="primary" data-read>I read it ✓ →</button></div>`)}
   if(s===7)return lessonFrame(`${tag(7)}<h1>Build fluency</h1><p>Read these as smoothly as you can.</p>${wordCards([...l.words,...l.words])}<span class="badge">⏱ Accuracy and rate recorded in production</span>${nextButton(8,'Done reading')}`);
-  if(s===8){const lines=[`The detective found ${l.words[0]}.`,`Circle the word ${l.words[1]}.`,`The final clue says ${l.words[2]}.`,`Read ${l.words.join(', ')} to solve the case.`];return lessonFrame(`${tag(8)}<h1>Read the sentences</h1>${lines.map(x=>`<div class="sentence">${x}</div>`).join('')}<div class="footerActions"><button class="secondary" data-speak="${lines.join(' ')}">🔊 Read to me</button><button class="primary" data-next="9">I reread them →</button></div>`)}
+  if(s===8){const lines=SENTENCE_SETS[state.lesson];return lessonFrame(`${tag(8)}<h1>Read the sentences</h1>${lines.map(x=>`<div class="sentence">${x}</div>`).join('')}<div class="footerActions"><button class="secondary" data-speak="${lines.join(' ')}">🔊 Read to me</button><button class="primary" data-next="9">I reread them →</button></div>`)}
   if(s===9){const story=`Detective Dot opened the clue file. The first card said ${l.words[0]}. The next card said ${l.words[1]}. The last card said ${l.words[2]}. Dot read every ${l.pattern} clue and solved the case.`;return lessonFrame(`${tag(9)}<h1>The ${l.pattern} Case</h1><div class="story">${story}</div><div class="footerActions"><button class="secondary" data-speak="${story}">🔊 Read to me</button><button class="primary" data-next="10">I read it →</button></div>`)}
   if(s===10){const target=l.words[state.spellIndex%l.words.length];return lessonFrame(`${tag(10)}<h1>Spell ${target}</h1><div class="word">${state.spellAnswer||'_'}</div><div class="tileRow">${target.split('').sort(()=>.5-Math.random()).map(ch=>`<button class="choice" data-letter="${ch}">${ch}</button>`).join('')}</div><div class="footerActions"><button class="secondary" data-clear>Clear</button><button class="primary" data-checkspell="${target}">Check spelling</button></div>`)}
   if(s===11){const distract=['cat','dog','map','sun','fan'];const words=[...l.words,...distract];return lessonFrame(`${tag(11)}<h1>Pattern hunt</h1><p>Find every ${l.pattern} word.</p><div class="choiceRow">${words.map(w=>`<button class="choice ${state.hunt.includes(w)?'selected':''}" data-hunt="${w}">${w}</button>`).join('')}</div><p>${state.hunt.length} clues found</p>${state.hunt.length>=l.words.length?nextButton(12):''}`)}
