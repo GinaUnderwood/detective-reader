@@ -150,6 +150,7 @@ const SCREEN_FOUR_CONFETTI_MS=3000;
 const SCREEN_FOUR_INTRO="Let's keep reading.";
 const SCREEN_FOUR_QUESTION='What part of the word stays the same? Click on the part below.';
 const SCREEN_FIVE_NARRATION='Now you get to build a word. Click on the first letter to build a word.';
+const SCREEN_SIX_NARRATION='Your turn. Read the word and click below for the next word.';
 function chooseNarratorVoice(voices){
   const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
   if(!english.length)return null;
@@ -402,6 +403,12 @@ function startScreenFiveSequence(){
   speak(SCREEN_FIVE_NARRATION,.78);
 }
 
+function startScreenSixSequence(){
+  stopNarration();
+  if(state.view!=='lesson'||state.screen!==6)return;
+  speak(SCREEN_SIX_NARRATION,.78);
+}
+
 function startAutomaticLessonSequence(){
   if(state.view!=='lesson')return;
   if(state.screen===1)speak(SCREEN_ONE_NARRATION);
@@ -409,6 +416,7 @@ function startAutomaticLessonSequence(){
   else if(state.screen===3)startScreenThreeSequence();
   else if(state.screen===4)startScreenFourSequence();
   else if(state.screen===5)startScreenFiveSequence();
+  else if(state.screen===6)startScreenSixSequence();
 }
 
 function goToLessonScreen(next){
@@ -451,7 +459,7 @@ function bind(){
   document.querySelectorAll('[data-next]').forEach(x=>x.onclick=()=>goToLessonScreen(x.dataset.next));
   document.querySelectorAll('[data-speak]').forEach(x=>x.onclick=()=>speak(x.dataset.speak));
   document.querySelectorAll('[data-play-word-sequence]').forEach(x=>x.onclick=()=>startScreenTwoSequence());
-  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else if(state.screen===4)startScreenFourSequence();else if(state.screen===5)startScreenFiveSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
+  document.querySelectorAll('[data-replay]').forEach(x=>x.onclick=()=>{if(state.screen===2)startScreenTwoSequence();else if(state.screen===3)startScreenThreeSequence();else if(state.screen===4)startScreenFourSequence();else if(state.screen===5)startScreenFiveSequence();else if(state.screen===6)startScreenSixSequence();else speak(state.screen===1?SCREEN_ONE_NARRATION:`Screen ${state.screen}. Follow the clue.`)});
   document.querySelectorAll('[data-correct]').forEach(x=>x.onclick=completeScreenFour);
   document.querySelectorAll('[data-wrong]').forEach(x=>x.onclick=()=>toast('Look at the ending and try again.'));
   document.querySelectorAll('[data-build]').forEach(x=>x.onclick=()=>buildLessonWord(+x.dataset.build));
