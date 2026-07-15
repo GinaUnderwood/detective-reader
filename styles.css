@@ -42,7 +42,7 @@ h1,h2,h3,p{margin-top:0}
 .screenCard{min-height:600px;display:flex;flex-direction:column;align-items:center;text-align:center;background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:36px;box-shadow:var(--shadow)}
 .screenCard h1{font-size:38px}
 .screenTag{color:var(--gold);font-weight:900;letter-spacing:.14em;font-size:11px}
-.wordRow,.choiceRow,.tileRow{display:flex;flex-wrap:wrap;justify-content:center;gap:15px;margin:28px 0}
+.wordRow,.choiceRow{display:flex;flex-wrap:wrap;justify-content:center;gap:15px;margin:28px 0}
 .word{min-width:145px;padding:24px;border:2px solid var(--line);border-radius:17px;background:white;font-size:38px;font-weight:900}
 .word mark{background:#dcecff;color:#285f9c;border-radius:8px;padding:4px}
 .fluencyWord{appearance:none;color:var(--ink);transition:border-color .15s ease,background .15s ease,transform .15s ease}
@@ -52,6 +52,8 @@ h1,h2,h3,p{margin-top:0}
 .choice:hover,.choice.selected{border-color:var(--green);background:#e8f6f1}
 .choice:disabled{cursor:wait;opacity:.55}
 .choice:disabled:hover{border-color:var(--line);background:white}
+.primary:disabled,.secondary:disabled{cursor:not-allowed;opacity:.5;box-shadow:none}
+.primary:disabled:hover{background:var(--green)}
 .clue{border-left:5px solid var(--gold);background:#fff6e5;border-radius:10px;padding:14px 18px;text-align:left;max-width:700px;line-height:1.55}
 .sentenceList{width:min(760px,100%)}
 .sentence{width:100%;text-align:left;padding:15px 18px;border-bottom:1px solid var(--line);font-size:20px;line-height:1.8}
@@ -59,6 +61,16 @@ h1,h2,h3,p{margin-top:0}
 .sentenceWord.active,.storyWord.active{background:#ffe58f;color:#174d43;box-shadow:0 0 0 3px rgba(228,168,61,.28);font-weight:900}
 .screenEightStatus{min-height:26px;margin:14px 0 0;color:var(--green2);font-weight:900}
 .screenNineStatus{min-height:26px;margin:14px 0 0;color:var(--green2);font-weight:900}
+.spellingInstruction{width:min(720px,100%);min-height:68px;display:flex;align-items:center;justify-content:center;margin:0;padding:12px 18px;border-radius:12px;background:#edf7f3;color:var(--green2);font-size:18px;font-weight:900;line-height:1.4}
+.spellingLines{width:min(680px,100%);margin:22px auto 14px;padding-left:44px;text-align:left}
+.spellingLine{min-height:60px;padding:11px 14px;border-bottom:3px solid var(--line);border-radius:10px 10px 0 0;background:white;font-size:30px;font-weight:900;line-height:1.2;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease}
+.spellingLine + .spellingLine{margin-top:7px}
+.spellingLine::marker{color:var(--green);font-size:21px;font-weight:900}
+.spellingLine.active{border-color:var(--gold);background:#fff8e8;box-shadow:0 5px 14px rgba(180,125,26,.12)}
+.spellingLine.complete{border-color:var(--green);background:#f5fbf8}
+.spellingWord{display:block;min-height:1.2em;letter-spacing:.14em}
+.spellingHint{margin:0;color:var(--muted);font-weight:800;line-height:1.4}
+.spellingPractice .footerActions{width:100%;justify-content:center}
 .story{max-width:700px;text-align:left;font-size:20px;line-height:1.8;background:white;border:1px solid var(--line);border-radius:16px;padding:26px}
 .story p:last-child{margin-bottom:0}
 .footerActions{margin-top:auto;display:flex;gap:10px;padding-top:25px}
@@ -122,6 +134,7 @@ h1,h2,h3,p{margin-top:0}
   .startCaseArrow,.flashWord.active,.screenFourWord.active,.rimeReveal .rimeWord mark,.revealContinuePrompt.ready .revealContinueArrow,.confettiLayer.active .confettiPiece{animation:none}
   .flashWord,.screenFourWord{transition:none}
   .sentenceWord,.storyWord{transition:none}
+  .spellingLine{transition:none}
   .flashWord.active,.screenFourWord.active{transform:scale(1.03)}
   .revealContinuePrompt.ready .revealContinueArrow{opacity:1;visibility:visible;transform:none}
   .confettiLayer.active .confettiPiece{top:12%;opacity:.85;transform:none}
@@ -139,6 +152,9 @@ h1,h2,h3,p{margin-top:0}
   .hero{align-items:flex-start}
   .hero h1{font-size:31px}
   .word{min-width:95px;padding:18px;font-size:30px}
+  .spellingInstruction{min-height:76px;font-size:16px}
+  .spellingLines{padding-left:36px}
+  .spellingLine{min-height:54px;padding:9px 11px;font-size:27px}
 }
 @media(max-width:380px){
   .lessonHead .secondary{padding:0 10px}
