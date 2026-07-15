@@ -108,6 +108,73 @@ const SENTENCE_SETS=[
 ];
 if(SENTENCE_SETS.length!==LESSONS.length)throw new Error('Every lesson needs a sentence set.');
 
+// Screen 9 stories use only cumulative case words and the standard 220 Dolch sight words.
+const DOLCH_SIGHT_WORDS=new Set(`a and away big blue can come down find for funny go help here i in is it jump little look make me my not one play red run said see the three to two up we where yellow you all am are at ate be black brown but came did do eat four get good have he into like must new no now on our out please pretty ran ride saw say she so soon that there they this too under want was well went what white who will with yes after again an any as ask by could every fly from give going had has her him his how just know let live may of old once open over put round some stop take thank them then think walk were when always around because been before best both buy call cold does don't fast first five found gave goes green its made many off or pull read right sing sit sleep tell their these those upon us use very wash which why wish work would write your about better bring carry clean cut done draw drink eight fall far full got grow hold hot hurt if keep kind laugh light long much myself never only own pick seven shall show six small start ten today together try warm`.split(/\s+/));
+const STORY_SETS=[
+  ['I see a kit.','The kit is big.','I sit by it.'],
+  ['I see the tip.','I put my lip on it.','I take a sip.'],
+  ['I see a pin.','I put the pin in a tin.','I look at the tin.'],
+  ['His sis has a kit.','This is her kit.','She can sit with it.'],
+  ['The kid hid the pin.','I did not see the pin.','The kid hid it well.'],
+  ['The pig is big.','The pig can dig.','I see the pig.'],
+  ['It is dim.','I see a lid.','The lid has a rim.'],
+  ['I see a bib.','The bib is big.','It can fit me.'],
+  ['I can fix the bib.','I fix the rip.','The bib will fit.'],
+  ['I get a whiff.','The whiff is not good.','I will go away.'],
+  ['I see a big hill.','I sit on the hill.','I can see the mill.'],
+  ['I miss him.','I see him.','I kiss him.'],
+  ['I see a cat.','The cat is on the mat.','The cat has a hat.'],
+  ['The cap is in my lap.','I tap the cap.','I see a gap in the cap.'],
+  ['The man ran to the fan.','The fan is on the mat.','The man can fix it.'],
+  ['The man has a map.','His map is as big as the mat.','He has it.'],
+  ['My dad had a bad map.','Dad was mad.','I had a good map.'],
+  ['I see a bag.','The bag has a tag.','The tag is red.'],
+  ['I see ham and jam.','The ham is in the pan.','I can have the jam.'],
+  ['I see the wax.','The wax is on the lid.','I will get the wax.'],
+  ['I see a cab.','The cab is at the lab.','I can get in the cab.'],
+  ['The pot is hot.','I see a dot on the pot.','Do not tap it.'],
+  ['I see a mop.','The mop is on the mat.','I hop to the mop.'],
+  ['The lid is by the pot.','The pot is on the mat.','I put the lid on.'],
+  ['I see a pod.','I put the pod in a bag.','I nod when I am done.'],
+  ['The dog can jog.','The dog can see a log.','The log is in the fog.'],
+  ['My mom can jog.','Mom can see the dog.','The dog can see Mom.'],
+  ['I have a job.','My job is to mop.','I mop the lab.'],
+  ['The fox is in the box.','The box is big.','I see the fox.'],
+  ['The lid is off the pot.','I put it on.','It will not fall off.'],
+  ['The moss is on the log.','I can see the moss.','I will not toss the log.'],
+  ['I see a pet.','The pet can sit.','I let the pet hop.'],
+  ['The pet has pep.','It can hop and run.','I see it hop.'],
+  ['The hen is in the pen.','A man can see the hen.','He will let it be.'],
+  ['The hen is on the bed.','I fed the hen.','The hen is red.'],
+  ['The dog can beg.','It can sit by my leg.','I let it sit.'],
+  ['I see a gem.','The gem is red.','I can show it to my dad.'],
+  ['I see a web.','The web is in the shed.','I will not hit it.'],
+  ['The bell fell.','I will tell my dad.','He can get the bell.'],
+  ['This is a mess.','I have less jam.','I will clean the mess.'],
+  ['I see a hut.','The hut is big.','I can cut the ham in the hut.'],
+  ['The pup is in the hut.','The pup can sit up.','I see the pup.'],
+  ['The sun is up.','We can run.','It is fun.'],
+  ['The bus is big.','The bus can go.','Come with us on the bus.'],
+  ['I see a bug on the rug.','The pup can see the bug.','I hug the pup.'],
+  ['The pig is in the mud.','I see the pig.','The pig can dig in the mud.'],
+  ['I have gum.','I hum as I run.','It is fun.'],
+  ['The cub is in the tub.','I rub the cub.','The cub can sit.'],
+  ['The pup can huff.','It can puff.','The pup will sit by me.'],
+  ['The gull is on the hull.','The hull is red.','The gull can see the sun.']
+];
+if(STORY_SETS.length!==LESSONS.length)throw new Error('Every lesson needs a decodable story.');
+{
+  const introduced=new Set(),wordPattern=/[A-Za-z]+(?:['’][A-Za-z]+)*/g;
+  STORY_SETS.forEach((story,index)=>{
+    if(!Array.isArray(story)||story.length!==3||story.some(line=>typeof line!=='string'||!line.trim()))throw new Error(`Story ${index+1} needs exactly three sentences.`);
+    const current=new Set([...LESSONS[index].words,...LESSONS[index].keepReadingWords].map(word=>word.toLowerCase()));
+    current.forEach(word=>introduced.add(word));
+    const tokens=story.flatMap(line=>line.match(wordPattern)||[]),blocked=tokens.filter(word=>!introduced.has(word.toLowerCase())&&!DOLCH_SIGHT_WORDS.has(word.toLowerCase()));
+    if(blocked.length)throw new Error(`Story ${index+1} has words that have not been introduced: ${[...new Set(blocked)].join(', ')}`);
+    if(!tokens.some(word=>current.has(word.toLowerCase())))throw new Error(`Story ${index+1} needs a word from the current case.`);
+  });
+}
+
 const AVATARS=[['🦉','Owl Investigator'],['🦊','Fox Detective'],['🐱','Clue Cat'],['🤖','Robo Reader']];
 const SHOP=[['🎩','Detective Hat',40],['🔎','Golden Magnifier',50],['📓','Secret Notebook',35],['🧥','Mystery Cape',60],['🗺️','Treasure Map',45],['🧰','Clue Kit',55],['🏠','Treehouse Office',90],['🚲','Case Cruiser',75]];
 const saved=JSON.parse(localStorage.getItem('detectiveReader')||'{}');
@@ -305,7 +372,7 @@ function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="s
   if(s===6){const words=previousScreenWords(),word=words[state.readIndex%words.length],position=state.readIndex+1;return lessonFrame(`${tag(6)}<h1>Read each word</h1><div class="word" data-screen-six-word tabindex="-1" aria-live="polite" aria-label="Word ${position} of ${words.length}: ${word}">${word}</div><p>Word ${position} of ${words.length}</p><div class="footerActions"><button class="secondary hearWordsButton" data-speak="${word}" aria-label="Hear the word ${word}"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the word</span></button><button class="primary" data-read>I read it ✓ →</button></div>`)}
   if(s===7){const words=previousScreenWords(),allWords=`${words.join('. ')}.`;return lessonFrame(`${screenSevenConfetti()}${tag(7)}<h1>Build fluency</h1><p>Read these as smoothly as you can.</p>${fluencyWordButtons(words)}<p class="screenSevenStatus" data-screen-seven-status aria-live="polite"></p><div class="footerActions"><button class="secondary hearWordsButton" data-screen-seven-action data-speak="${allWords}" aria-label="Hear the Words"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-screen-seven-action data-screen-seven-complete>I read them ✓ →</button></div>`)}
   if(s===8){const lines=SENTENCE_SETS[state.lesson];return lessonFrame(`${screenEightConfetti()}${tag(8)}<h1>Read the sentences</h1><div class="sentenceList" aria-label="Sentences to read">${lines.map(sentenceLine).join('')}</div><p class="screenEightStatus" data-screen-eight-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-eight-action data-screen-eight-read>🔊 Read to Me</button><button class="primary" data-screen-eight-action data-screen-eight-complete>I read them ✓ →</button></div>`)}
-  if(s===9){const story=`Detective Dot opened the clue file. The first card said ${l.words[0]}. The next card said ${l.words[1]}. The last card said ${l.words[2]}. Dot read every ${l.pattern} clue and solved the case.`;return lessonFrame(`${tag(9)}<h1>The ${l.pattern} Case</h1><div class="story">${story}</div><div class="footerActions"><button class="secondary" data-speak="${story}">🔊 Read to me</button><button class="primary" data-next="10">I read it →</button></div>`)}
+  if(s===9){const lines=STORY_SETS[state.lesson],story=lines.join(' ');return lessonFrame(`${tag(9)}<h1>The ${l.pattern} Case</h1><div class="story" aria-label="Decodable story">${lines.map(line=>`<p>${escapeHtml(line)}</p>`).join('')}</div><div class="footerActions"><button class="secondary" data-speak="${escapeHtml(story)}">🔊 Read to me</button><button class="primary" data-next="10">I read it →</button></div>`)}
   if(s===10){const target=l.words[state.spellIndex%l.words.length];return lessonFrame(`${tag(10)}<h1>Spell ${target}</h1><div class="word">${state.spellAnswer||'_'}</div><div class="tileRow">${target.split('').sort(()=>.5-Math.random()).map(ch=>`<button class="choice" data-letter="${ch}">${ch}</button>`).join('')}</div><div class="footerActions"><button class="secondary" data-clear>Clear</button><button class="primary" data-checkspell="${target}">Check spelling</button></div>`)}
   if(s===11){const distract=['cat','dog','map','sun','fan'];const words=[...l.words,...distract];return lessonFrame(`${tag(11)}<h1>Pattern hunt</h1><p>Find every ${l.pattern} word.</p><div class="choiceRow">${words.map(w=>`<button class="choice ${state.hunt.includes(w)?'selected':''}" data-hunt="${w}">${w}</button>`).join('')}</div><p>${state.hunt.length} clues found</p>${state.hunt.length>=l.words.length?nextButton(12):''}`)}
   if(s===12){const big=['ch','tr','sl','gr','dr'].map(o=>o+ending());return lessonFrame(`${tag(12)}<h1>Challenge clues</h1><p>You know ${l.pattern}. Try these bigger transfer words.</p>${wordCards(big)}<p class="clue">These are prototype transfer examples. A reading specialist should approve each final challenge list before production.</p>${nextButton(13)}`)}

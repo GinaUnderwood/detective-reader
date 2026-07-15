@@ -59,6 +59,7 @@ h1,h2,h3,p{margin-top:0}
 .sentenceWord.active{background:#ffe58f;color:#174d43;box-shadow:0 0 0 3px rgba(228,168,61,.28);font-weight:900}
 .screenEightStatus{min-height:26px;margin:14px 0 0;color:var(--green2);font-weight:900}
 .story{max-width:700px;text-align:left;font-size:20px;line-height:1.8;background:white;border:1px solid var(--line);border-radius:16px;padding:26px}
+.story p:last-child{margin-bottom:0}
 .footerActions{margin-top:auto;display:flex;gap:10px;padding-top:25px}
 .startCasePrompt{margin-top:24px;align-items:center;justify-content:center;gap:14px}
 .startCaseArrow{color:var(--gold);font-size:38px;font-weight:900;line-height:1;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(122,83,18,.2));animation:pointToStart .7s ease-in-out infinite alternate}
