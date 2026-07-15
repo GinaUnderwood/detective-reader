@@ -226,6 +226,7 @@ const SCREEN_SEVEN_CONFETTI_MS=3000;
 const SCREEN_EIGHT_NARRATION='Now, read these sentences.';
 const SCREEN_EIGHT_CONFETTI_MS=3000;
 const SCREEN_NINE_NARRATION='Next, read the story.';
+const SCREEN_NINE_CONFETTI_MS=3000;
 function chooseNarratorVoice(voices){
   const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
   if(!english.length)return null;
@@ -314,6 +315,9 @@ function stopNarration(){
   }
   if(screenNineRoot?.isConnected){
     screenNineRoot.querySelectorAll('[data-screen-nine-word].active').forEach(word=>word.classList.remove('active'));
+    screenNineRoot.querySelector('[data-screen-nine-confetti]')?.classList.remove('active');
+    screenNineRoot.classList.remove('celebrating');
+    screenNineRoot.querySelectorAll('[data-screen-nine-action]').forEach(button=>button.disabled=false);
     const status=screenNineRoot.querySelector('[data-screen-nine-status]');
     if(status)status.textContent='';
   }
@@ -384,6 +388,7 @@ function screenThreeConfetti(){return lessonConfetti('screen-three')}
 function screenFourConfetti(){return lessonConfetti('screen-four')}
 function screenSevenConfetti(){return lessonConfetti('screen-seven')}
 function screenEightConfetti(){return lessonConfetti('screen-eight')}
+function screenNineConfetti(){return lessonConfetti('screen-nine')}
 function screenThreeContinuePrompt(){return `<div class="footerActions revealContinuePrompt" data-screen-three-prompt><span class="revealContinueArrow" aria-hidden="true">➜</span><button class="primary" data-next="4">Continue to Screen 4 →</button></div>`}
 function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="screenTag">SCREEN ${n} OF ${screenNames.length} · ${screenNames[n-1]}</span>`;
   if(s===1)return lessonFrame(`${tag(1)}<div class="bigReward">🕵️</div><h1>Welcome, Pattern Detective!</h1><p>Your next case is the <strong>${l.pattern}</strong> word family.</p>${startCasePrompt()}`);
@@ -394,7 +399,7 @@ function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="s
   if(s===6){const words=previousScreenWords(),word=words[state.readIndex%words.length],position=state.readIndex+1;return lessonFrame(`${tag(6)}<h1>Read each word</h1><div class="word" data-screen-six-word tabindex="-1" aria-live="polite" aria-label="Word ${position} of ${words.length}: ${word}">${word}</div><p>Word ${position} of ${words.length}</p><div class="footerActions"><button class="secondary hearWordsButton" data-speak="${word}" aria-label="Hear the word ${word}"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the word</span></button><button class="primary" data-read>I read it ✓ →</button></div>`)}
   if(s===7){const words=previousScreenWords(),allWords=`${words.join('. ')}.`;return lessonFrame(`${screenSevenConfetti()}${tag(7)}<h1>Build fluency</h1><p>Read these as smoothly as you can.</p>${fluencyWordButtons(words)}<p class="screenSevenStatus" data-screen-seven-status aria-live="polite"></p><div class="footerActions"><button class="secondary hearWordsButton" data-screen-seven-action data-speak="${allWords}" aria-label="Hear the Words"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-screen-seven-action data-screen-seven-complete>I read them ✓ →</button></div>`)}
   if(s===8){const lines=SENTENCE_SETS[state.lesson];return lessonFrame(`${screenEightConfetti()}${tag(8)}<h1>Read the sentences</h1><div class="sentenceList" aria-label="Sentences to read">${lines.map(sentenceLine).join('')}</div><p class="screenEightStatus" data-screen-eight-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-eight-action data-screen-eight-read>🔊 Read to Me</button><button class="primary" data-screen-eight-action data-screen-eight-complete>I read them ✓ →</button></div>`)}
-  if(s===9){const lines=STORY_SETS[state.lesson];return lessonFrame(`${tag(9)}<h1>The ${l.pattern} Case</h1><div class="story" aria-label="Decodable story">${lines.map(storyLine).join('')}</div><p class="screenNineStatus" data-screen-nine-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-nine-read>🔊 Read to Me</button><button class="primary" data-next="10">I read it →</button></div>`)}
+  if(s===9){const lines=STORY_SETS[state.lesson];return lessonFrame(`${screenNineConfetti()}${tag(9)}<h1>The ${l.pattern} Case</h1><div class="story" aria-label="Decodable story">${lines.map(storyLine).join('')}</div><p class="screenNineStatus" data-screen-nine-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-nine-action data-screen-nine-read>🔊 Read to Me</button><button class="primary" data-screen-nine-action data-screen-nine-complete>I read it ✓ →</button></div>`)}
   if(s===10){const target=l.words[state.spellIndex%l.words.length];return lessonFrame(`${tag(10)}<h1>Spell ${target}</h1><div class="word">${state.spellAnswer||'_'}</div><div class="tileRow">${target.split('').sort(()=>.5-Math.random()).map(ch=>`<button class="choice" data-letter="${ch}">${ch}</button>`).join('')}</div><div class="footerActions"><button class="secondary" data-clear>Clear</button><button class="primary" data-checkspell="${target}">Check spelling</button></div>`)}
   if(s===11){const distract=['cat','dog','map','sun','fan'];const words=[...l.words,...distract];return lessonFrame(`${tag(11)}<h1>Pattern hunt</h1><p>Find every ${l.pattern} word.</p><div class="choiceRow">${words.map(w=>`<button class="choice ${state.hunt.includes(w)?'selected':''}" data-hunt="${w}">${w}</button>`).join('')}</div><p>${state.hunt.length} clues found</p>${state.hunt.length>=l.words.length?nextButton(12):''}`)}
   if(s===12){const big=['ch','tr','sl','gr','dr'].map(o=>o+ending());return lessonFrame(`${tag(12)}<h1>Challenge clues</h1><p>You know ${l.pattern}. Try these bigger transfer words.</p>${wordCards(big)}<p class="clue">These are prototype transfer examples. A reading specialist should approve each final challenge list before production.</p>${nextButton(13)}`)}
@@ -653,6 +658,24 @@ function readScreenNineStory(){
   readWord(0);
 }
 
+function completeScreenNine(){
+  stopNarration();
+  const run=++screenNineRun,lessonIndex=state.lesson,root=document.querySelector('.storyPractice');
+  const confetti=root?.querySelector('[data-screen-nine-confetti]'),status=root?.querySelector('[data-screen-nine-status]'),actions=[...root?.querySelectorAll('[data-screen-nine-action]')||[]];
+  if(state.view!=='lesson'||state.screen!==9||!root||!confetti||!status||actions.length!==2)return;
+  screenNineRoot=root;
+  actions.forEach(button=>button.disabled=true);
+  root.classList.add('celebrating');
+  status.textContent='Great reading!';
+  confetti.classList.add('active');
+  screenNineTimer=setTimeout(()=>{
+    if(run!==screenNineRun||state.view!=='lesson'||state.screen!==9||state.lesson!==lessonIndex||!root.isConnected)return;
+    confetti.classList.remove('active');
+    root.classList.remove('celebrating');
+    goToLessonScreen(10);
+  },SCREEN_NINE_CONFETTI_MS);
+}
+
 function completeScreenSeven(){
   stopNarration();
   const run=++screenSevenRun,lessonIndex=state.lesson,root=document.querySelector('.fluencyPractice');
@@ -733,6 +756,7 @@ function bind(){
   document.querySelectorAll('[data-screen-eight-read]').forEach(x=>x.onclick=readScreenEightSentences);
   document.querySelectorAll('[data-screen-eight-complete]').forEach(x=>x.onclick=completeScreenEight);
   document.querySelectorAll('[data-screen-nine-read]').forEach(x=>x.onclick=readScreenNineStory);
+  document.querySelectorAll('[data-screen-nine-complete]').forEach(x=>x.onclick=completeScreenNine);
   document.querySelectorAll('[data-letter]').forEach(x=>x.onclick=()=>{state.spellAnswer+=x.dataset.letter;render()});
   document.querySelectorAll('[data-clear]').forEach(x=>x.onclick=()=>{state.spellAnswer='';render()});
   document.querySelectorAll('[data-checkspell]').forEach(x=>x.onclick=()=>{if(state.spellAnswer===x.dataset.checkspell){toast('Spelling solved! ⭐');state.spellAnswer='';state.spellIndex++;if(state.spellIndex>=3){state.spellIndex=0;goToLessonScreen(11);return}render()}else toast('Listen to each sound and try again.')});
