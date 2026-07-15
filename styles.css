@@ -84,6 +84,7 @@ h1,h2,h3,p{margin-top:0}
 .screenFourWord.active{transform:scale(1.1);border-color:var(--gold);background:#fff4cf;box-shadow:0 10px 25px rgba(180,125,26,.24);animation:wordFlash .65s ease-in-out infinite}
 .keepReading.celebrating .choiceRow{pointer-events:none}
 .buildWordBox{display:inline-flex;align-items:center;justify-content:center;gap:0;min-width:210px;margin:22px 0 16px;transition:border-color .2s ease,background .2s ease,box-shadow .2s ease}
+.buildOnset:empty{display:inline-block;min-width:1ch;min-height:1em;margin-right:2px;border-bottom:3px solid currentColor}
 .buildWordBox.built{border-color:var(--green);background:#e8f6f1;box-shadow:0 8px 20px rgba(40,122,103,.16)}
 .buildWordBox.built .buildOnset{color:var(--green2)}
 .buildWordBox.built .buildOnset:empty{display:none}

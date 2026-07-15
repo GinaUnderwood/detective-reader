@@ -55,7 +55,7 @@ const LESSONS=[
 const AVATARS=[['🦉','Owl Investigator'],['🦊','Fox Detective'],['🐱','Clue Cat'],['🤖','Robo Reader']];
 const SHOP=[['🎩','Detective Hat',40],['🔎','Golden Magnifier',50],['📓','Secret Notebook',35],['🧥','Mystery Cape',60],['🗺️','Treasure Map',45],['🧰','Clue Kit',55],['🏠','Treehouse Office',90],['🚲','Case Cruiser',75]];
 const saved=JSON.parse(localStorage.getItem('detectiveReader')||'{}');
-const state={view:'home',lesson:saved.lesson||0,screen:1,coins:saved.coins??120,avatar:saved.avatar||0,owned:saved.owned||[],completed:saved.completed||[],readIndex:0,buildIndex:null,spellIndex:0,spellAnswer:'',hunt:[],mastery:0};
+const state={view:'home',lesson:saved.lesson||0,screen:1,coins:saved.coins??120,avatar:saved.avatar||0,owned:saved.owned||[],completed:saved.completed||[],readIndex:0,buildWords:[],buildIndex:null,spellIndex:0,spellAnswer:'',hunt:[],mastery:0};
 const app=document.querySelector('#app');
 
 function save(){localStorage.setItem('detectiveReader',JSON.stringify({lesson:state.lesson,coins:state.coins,avatar:state.avatar,owned:state.owned,completed:state.completed}))}
@@ -63,6 +63,22 @@ function lesson(){return LESSONS[state.lesson]}
 function keepReadingWords(){return lesson().keepReadingWords}
 function ending(){return lesson().pattern.slice(1)}
 function onset(word){return word.slice(0,-ending().length)}
+function chooseScreenFiveWords(){
+  const seen=new Set(),pool=[...lesson().words,...keepReadingWords()].filter(word=>{
+    const key=word.toLowerCase();
+    if(!onset(word)||seen.has(key))return false;
+    seen.add(key);
+    return true;
+  });
+  for(let i=pool.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [pool[i],pool[j]]=[pool[j],pool[i]];
+  }
+  return pool.slice(0,3);
+}
+function prepareScreenFive(){state.buildWords=chooseScreenFiveWords();state.buildIndex=null}
+function resetScreenFive(){state.buildWords=[];state.buildIndex=null}
+function screenFiveWords(){if(!state.buildWords.length)prepareScreenFive();return state.buildWords}
 const FEMALE_NARRATOR_PRIORITIES=['Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)','Microsoft Ava Online (Natural)','Microsoft Emma Multilingual Online (Natural)','Microsoft Aria','Microsoft Jenny','Microsoft Ava','Microsoft Emma','Google UK English Female','Google US English','Samantha','Ava','Emma','Allison','Zira','Victoria','Karen','Moira','Tessa','Fiona','Libby','Sonia','Hazel','Susan','Serena','Kate','Veena','Joanna','Kendra','Kimberly','Ivy','Salli'];
 let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer=null,activeNarrationTimer=null,narratorUnavailable=false;
 let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null,screenThreeRoot=null,screenFourRun=0,screenFourTimer=null,screenFourRoot=null;
@@ -181,7 +197,7 @@ function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="s
   if(s===2)return lessonFrame(`${tag(2)}<h1>Listen carefully.</h1><p class="screenTwoQuestion">What do these words have in common?</p>${flashWordCards(l.words)}<p class="clue">Watch each word flash as you hear it.</p><div class="footerActions"><button class="secondary hearWordsButton" data-play-word-sequence aria-label="Hear the Words again"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-next="3">I listened ✓ →</button></div>`);
   if(s===3)return lessonFrame(`${screenThreeConfetti()}${tag(3)}<h1>They all end with <mark>${l.pattern}</mark>.</h1>${wordCards(l.words,true)}<p class="clue">The beginning changes. The ${l.pattern} rime stays the same.</p><p class="rimeSequenceStatus" data-screen-three-status aria-live="polite">Their ending sound is the same. Listen to the words.</p>${screenThreeContinuePrompt()}`);
   if(s===4){const distractors=['-at','-op','-it'].filter(pattern=>pattern!==l.pattern).slice(0,2);return lessonFrame(`${screenFourConfetti()}${tag(4)}<h1>Keep Reading</h1>${screenFourWordCards(l.keepReadingWords)}<p class="screenFourQuestion" data-screen-four-status aria-live="polite">${SCREEN_FOUR_INTRO}</p><div class="choiceRow"><button class="choice" data-screen-four-choice data-correct disabled>${l.pattern}</button>${distractors.map(pattern=>`<button class="choice" data-screen-four-choice data-wrong disabled>${pattern}</button>`).join('')}</div>`)}
-  if(s===5){const os=l.words.map(onset),hasBuilt=Number.isInteger(state.buildIndex)&&state.buildIndex>=0&&state.buildIndex<l.words.length,builtWord=hasBuilt?l.words[state.buildIndex]:'',rime=ending(),builtOnset=hasBuilt?builtWord.slice(0,-rime.length):'_',builtRime=hasBuilt?builtWord.slice(-rime.length):rime;return lessonFrame(`${tag(5)}<h1>Build a Word</h1><div class="word buildWordBox ${hasBuilt?'built':''}" data-built-word aria-live="polite" aria-label="${hasBuilt?`Built word: ${builtWord}`:`Word building box for ${l.pattern}`}"><span class="buildOnset">${builtOnset}</span><span class="buildRime">${builtRime}</span></div><p class="buildInstruction" data-screen-five-status aria-live="polite">${hasBuilt?`You built ${builtWord}. Listen to the word.`:SCREEN_FIVE_NARRATION}</p><div class="choiceRow" aria-label="Beginning letter choices">${os.map((o,i)=>`<button class="choice buildChoice ${state.buildIndex===i?'selected':''}" data-build="${i}" aria-pressed="${state.buildIndex===i}" aria-label="${o?`Build ${l.words[i]} with ${o}`:`Build ${l.words[i]} with no beginning letter`}">${o||'∅'}</button>`).join('')}</div><div class="clue">Choose a beginning letter. It will join the ${l.pattern} rime to make a complete word.</div>${nextButton(6)}`)}
+  if(s===5){const words=screenFiveWords(),os=words.map(onset),hasBuilt=Number.isInteger(state.buildIndex)&&state.buildIndex>=0&&state.buildIndex<words.length,builtWord=hasBuilt?words[state.buildIndex]:'',rime=ending(),builtOnset=hasBuilt?builtWord.slice(0,-rime.length):'',builtRime=hasBuilt?builtWord.slice(-rime.length):rime;return lessonFrame(`${tag(5)}<h1>Build a Word</h1><div class="word buildWordBox ${hasBuilt?'built':''}" data-built-word aria-live="polite" aria-label="${hasBuilt?`Built word: ${builtWord}`:`Word building box for ${l.pattern}; beginning blank`}"><span class="buildOnset">${builtOnset}</span><span class="buildRime">${builtRime}</span></div><p class="buildInstruction" data-screen-five-status aria-live="polite">${hasBuilt?`You built ${builtWord}. Listen to the word.`:SCREEN_FIVE_NARRATION}</p><div class="choiceRow" aria-label="Beginning choices">${os.map((o,i)=>`<button class="choice buildChoice ${state.buildIndex===i?'selected':''}" data-build="${i}" aria-pressed="${state.buildIndex===i}" aria-label="Beginning ${o}">${o}</button>`).join('')}</div><div class="clue">Choose a beginning. It will join the ${l.pattern} rime to make a complete word.</div>${nextButton(6)}`)}
   if(s===6)return lessonFrame(`${tag(6)}<h1>Read each word.</h1><div class="word">${l.words[state.readIndex%l.words.length]}</div><p>${state.readIndex+1} of 6</p><div class="footerActions"><button class="secondary" data-speak="${l.words[state.readIndex%l.words.length]}">🔊 Tap sounds</button><button class="primary" data-read>✓ I read it</button></div>`);
   if(s===7)return lessonFrame(`${tag(7)}<h1>Build fluency</h1><p>Read these as smoothly as you can.</p>${wordCards([...l.words,...l.words])}<span class="badge">⏱ Accuracy and rate recorded in production</span>${nextButton(8,'Done reading')}`);
   if(s===8){const lines=[`The detective found ${l.words[0]}.`,`Circle the word ${l.words[1]}.`,`The final clue says ${l.words[2]}.`,`Read ${l.words.join(', ')} to solve the case.`];return lessonFrame(`${tag(8)}<h1>Read the sentences</h1>${lines.map(x=>`<div class="sentence">${x}</div>`).join('')}<div class="footerActions"><button class="secondary" data-speak="${lines.join(' ')}">🔊 Read to me</button><button class="primary" data-next="9">I reread them →</button></div>`)}
@@ -337,7 +353,10 @@ function startAutomaticLessonSequence(){
 
 function goToLessonScreen(next){
   stopNarration();
-  state.screen=+next;
+  const target=+next;
+  if(state.screen===5&&target!==5)resetScreenFive();
+  if(target===5&&state.screen!==5)prepareScreenFive();
+  state.screen=target;
   render();
   scrollPageToTop();
   startAutomaticLessonSequence();
@@ -354,7 +373,7 @@ function goBackFromLesson(){
 }
 
 function buildLessonWord(index){
-  const word=lesson().words[index];
+  const word=state.buildWords[index];
   if(!Number.isInteger(index)||!word)return;
   stopNarration();
   state.buildIndex=index;
@@ -385,5 +404,5 @@ function bind(){
   document.querySelectorAll('[data-avatar]').forEach(x=>x.onclick=()=>{state.avatar=+x.dataset.avatar;save();render()});
   document.querySelectorAll('[data-buy]').forEach(x=>x.onclick=()=>{const i=+x.dataset.buy,cost=SHOP[i][2];if(state.coins<cost)return toast('Solve more cases to earn coins.');state.coins-=cost;state.owned.push(i);save();toast(`${SHOP[i][1]} added to your collection!`);render()});
 }
-function resetLesson(){Object.assign(state,{readIndex:0,buildIndex:null,spellIndex:0,spellAnswer:'',hunt:[],mastery:0})}
+function resetLesson(){Object.assign(state,{readIndex:0,buildWords:[],buildIndex:null,spellIndex:0,spellAnswer:'',hunt:[],mastery:0})}
 render();
