@@ -840,16 +840,17 @@ function startScreenTenSequence(){
     line.classList.add('complete');
     line.setAttribute('aria-label',`Spelling word ${wordIndex+1}: ${word}`);
     status.textContent=`Word ${wordIndex+1} is ready. Check and read your word.`;
-    speakStage(SCREEN_TEN_REVIEW,.78,()=>{
-      schedule(()=>{
-        if(wordIndex===words.length-1){
+    if(wordIndex===words.length-1){
+      status.textContent='All five words are ready. How did you do?';
+      speakStage(SCREEN_TEN_REVIEW,.78,()=>{
+        schedule(()=>{
           status.textContent='Spelling practice complete. Check and read each word.';
           continueButton.disabled=false;
-          return;
-        }
-        speakStage(SCREEN_TEN_NEXT,.78,()=>playWord(wordIndex+1));
-      },SCREEN_TEN_REVIEW_WAIT_MS);
-    });
+        },SCREEN_TEN_REVIEW_WAIT_MS);
+      });
+      return;
+    }
+    schedule(()=>speakStage(SCREEN_TEN_NEXT,.78,()=>playWord(wordIndex+1)),SCREEN_TEN_REVIEW_WAIT_MS);
   };
   const revealLetter=(wordIndex,letterIndex)=>{
     if(!isCurrent())return;
