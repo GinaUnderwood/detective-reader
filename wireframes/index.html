@@ -361,6 +361,7 @@
     .hunt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .hunt-word { padding: 13px 6px; border: 1px solid var(--line); border-radius: 8px; background: #f7f8f8; text-align: center; font-size: 19px; }
     .hunt-word.hit { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 800; }
+    .pattern-flash-demo { padding: 8px; text-align: center; color: var(--accent); font-size: 54px; font-weight: 900; letter-spacing: .08em; }
 
     .mastery-word { padding: 28px; border: 3px solid var(--ink); border-radius: 12px; text-align: center; font-size: 60px; font-weight: 850; }
     .mastery-note { padding: 10px 12px; border-left: 4px solid var(--warn); background: #f5f2e9; color: #4c462f; font-size: 13px; }
@@ -700,12 +701,13 @@
         <figcaption class="screen-label">Screen 11 · Pattern Hunt</figcaption>
         <article class="phone">
           <div class="device-top"><span class="speaker"></span></div>
-          <header class="appbar"><button class="appbar__back" type="button" aria-label="Back to Screen 10: Spelling">← Back</button><div class="appbar__copy"><div class="appbar__eyebrow">Lesson 11 of 14</div><div class="appbar__title">Pattern Hunt</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
+          <header class="appbar"><button class="appbar__back" type="button" aria-label="Back to Screen 10: Spelling">← Back</button><div class="appbar__copy"><div class="appbar__eyebrow">Lesson 11 of 14</div><div class="appbar__title">Review: Pattern Hunt</div></div><div class="appbar__tools"><button class="icon-button">AUDIO</button><button class="icon-button">CC</button></div></header>
           <div class="lesson-progress" style="--p:78.6%"><span></span></div>
           <div class="screen-body">
-            <h3>Find all the -ip words.</h3>
+            <h3>Review: Pattern Hunt</h3>
+            <div class="pattern-flash-demo">-ip</div>
             <div class="hunt-grid"><div class="hunt-word">cat</div><div class="hunt-word hit">sip</div><div class="hunt-word">dog</div><div class="hunt-word hit">tip</div><div class="hunt-word">map</div><div class="hunt-word hit">lip</div><div class="hunt-word">sun</div><div class="hunt-word hit">rip</div><div class="hunt-word">fan</div><div class="hunt-word hit">zip</div></div>
-            <p class="helper">Correct word earns a star, then disappears.</p>
+            <p class="helper">On entry: “Let’s review. Click on the words that match this case pattern.” Then the case pattern flashes in large type for 2 seconds. Leaving Screen 11 clears every selected word.</p>
           </div>
           <div class="action-bar"><button class="primary-button">DONE HUNTING</button></div><div class="device-home"></div>
         </article>
