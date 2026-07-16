@@ -340,6 +340,7 @@ function stopNarration(){
     screenFourRoot.classList.remove('celebrating');
   }
   if(screenSevenRoot?.isConnected){
+    screenSevenRoot.querySelectorAll('[data-screen-seven-word].active').forEach(word=>word.classList.remove('active'));
     screenSevenRoot.querySelector('[data-screen-seven-confetti]')?.classList.remove('active');
     screenSevenRoot.classList.remove('celebrating');
     screenSevenRoot.querySelectorAll('[data-screen-seven-action]').forEach(button=>button.disabled=false);
@@ -408,7 +409,7 @@ function lessonFrame(body){const current=state.screen,backLabel=current===1?'Bac
 function nextButton(next,label='Continue'){return `<div class="footerActions"><button class="primary" data-next="${next}">${label} →</button></div>`}
 function startCasePrompt(){return `<div class="footerActions startCasePrompt"><span class="startCaseArrow" aria-hidden="true">➜</span><button class="primary startCaseButton" data-next="2">Start the Case</button></div>`}
 function wordCards(words,highlight=false){return `<div class="wordRow">${words.map(w=>{if(!highlight)return`<div class="word">${w}</div>`;const e=ending();if(!w.toLowerCase().endsWith(e.toLowerCase()))return`<div class="word">${w}</div>`;const o=w.slice(0,-e.length),r=w.slice(-e.length);return`<div class="word rimeWord">${o}<mark data-rime="${r.toLowerCase()}">${r}</mark></div>`}).join('')}</div>`}
-function fluencyWordButtons(words){return `<div class="wordRow" role="group" aria-label="Words introduced in this case">${words.map(w=>`<button type="button" class="word fluencyWord" data-speak="${w}" aria-label="Hear the word ${w}">${w}</button>`).join('')}</div>`}
+function fluencyWordButtons(words){return `<div class="wordRow" role="group" aria-label="Words introduced in this case">${words.map(w=>`<button type="button" class="word fluencyWord" data-screen-seven-word data-speak="${w}" aria-label="Hear the word ${w}">${w}</button>`).join('')}</div>`}
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 function sentenceLine(line,lineIndex){
   const matches=[...line.matchAll(/[A-Za-z]+(?:['’][A-Za-z]+)*/g)];
@@ -450,7 +451,7 @@ function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="s
   if(s===4){const distractors=['-at','-op','-it'].filter(pattern=>pattern!==l.pattern).slice(0,2);return lessonFrame(`${screenFourConfetti()}${tag(4)}<h1>Keep Reading</h1>${screenFourWordCards(l.keepReadingWords)}<p class="screenFourQuestion" data-screen-four-status aria-live="polite">${SCREEN_FOUR_INTRO}</p><div class="choiceRow"><button class="choice" data-screen-four-choice data-correct disabled>${l.pattern}</button>${distractors.map(pattern=>`<button class="choice" data-screen-four-choice data-wrong disabled>${pattern}</button>`).join('')}</div>`)}
   if(s===5){const words=screenFiveWords(),os=words.map(onset),hasBuilt=Number.isInteger(state.buildIndex)&&state.buildIndex>=0&&state.buildIndex<words.length,builtWord=hasBuilt?words[state.buildIndex]:'',rime=ending(),builtOnset=hasBuilt?builtWord.slice(0,-rime.length):'',builtRime=hasBuilt?builtWord.slice(-rime.length):rime;return lessonFrame(`${tag(5)}<h1>Build a Word</h1><div class="word buildWordBox ${hasBuilt?'built':''}" data-built-word aria-live="polite" aria-label="${hasBuilt?`Built word: ${builtWord}`:`Word building box for ${l.pattern}; beginning blank`}"><span class="buildOnset">${builtOnset}</span><span class="buildRime">${builtRime}</span></div><p class="buildInstruction" data-screen-five-status aria-live="polite">${hasBuilt?`You built ${builtWord}. Listen to the word.`:SCREEN_FIVE_NARRATION}</p><div class="choiceRow" aria-label="Beginning choices">${os.map((o,i)=>`<button class="choice buildChoice ${state.buildIndex===i?'selected':''}" data-build="${i}" aria-pressed="${state.buildIndex===i}" aria-label="Beginning ${o}">${o}</button>`).join('')}</div><div class="clue">Choose a beginning. It will join the ${l.pattern} rime to make a complete word.</div>${nextButton(6)}`)}
   if(s===6){const words=previousScreenWords(),word=words[state.readIndex%words.length],position=state.readIndex+1;return lessonFrame(`${tag(6)}<h1>Read each word</h1><div class="word" data-screen-six-word tabindex="-1" aria-live="polite" aria-label="Word ${position} of ${words.length}: ${word}">${word}</div><p>Word ${position} of ${words.length}</p><div class="footerActions"><button class="secondary hearWordsButton" data-speak="${word}" aria-label="Hear the word ${word}"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the word</span></button><button class="primary" data-read>I read it ✓ →</button></div>`)}
-  if(s===7){const words=previousScreenWords(),allWords=`${words.join('. ')}.`;return lessonFrame(`${screenSevenConfetti()}${tag(7)}<h1>Build fluency</h1><p>Read these as smoothly as you can.</p>${fluencyWordButtons(words)}<p class="screenSevenStatus" data-screen-seven-status aria-live="polite"></p><div class="footerActions"><button class="secondary hearWordsButton" data-screen-seven-action data-speak="${allWords}" aria-label="Hear the Words"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-screen-seven-action data-screen-seven-complete>I read them ✓ →</button></div>`)}
+  if(s===7){const words=previousScreenWords();return lessonFrame(`${screenSevenConfetti()}${tag(7)}<h1>Build fluency</h1><p>Read these as smoothly as you can.</p>${fluencyWordButtons(words)}<p class="screenSevenStatus" data-screen-seven-status aria-live="polite"></p><div class="footerActions"><button class="secondary hearWordsButton" data-screen-seven-action data-screen-seven-read aria-label="Hear all the Words"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-screen-seven-action data-screen-seven-complete>I read them ✓ →</button></div>`)}
   if(s===8){const lines=SENTENCE_SETS[state.lesson];return lessonFrame(`${screenEightConfetti()}${tag(8)}<h1>Read the sentences</h1><div class="sentenceList" aria-label="Sentences to read">${lines.map(sentenceLine).join('')}</div><p class="screenEightStatus" data-screen-eight-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-eight-action data-screen-eight-read>🔊 Read to Me</button><button class="primary" data-screen-eight-action data-screen-eight-complete>I read them ✓ →</button></div>`)}
   if(s===9){const lines=STORY_SETS[state.lesson];return lessonFrame(`${screenNineConfetti()}${tag(9)}<h1>The ${l.pattern} Case</h1><div class="story" aria-label="Decodable story">${lines.map(storyLine).join('')}</div><p class="screenNineStatus" data-screen-nine-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-nine-action data-screen-nine-read>🔊 Read to Me</button><button class="primary" data-screen-nine-action data-screen-nine-complete>I read it ✓ →</button></div>`)}
   if(s===10){const words=spellingWordsForLesson();return lessonFrame(`${tag(10)}<h1>Spelling</h1><p class="spellingInstruction" data-screen-ten-status aria-live="polite" aria-atomic="true">Get your paper and pencil ready. Listen for directions.</p><ol class="spellingLines" aria-label="Five-word spelling test">${words.map((_,index)=>`<li class="spellingLine" data-screen-ten-line="${index}" aria-label="Spelling word ${index+1}, waiting"><span class="spellingWord" data-screen-ten-word="${index}" aria-hidden="true"></span></li>`).join('')}</ol><p class="spellingHint">Say, unblend, spell aloud, write, then check each word.</p><div class="footerActions"><button class="primary" data-next="11" data-screen-ten-continue disabled>Continue →</button></div>`)}
@@ -603,6 +604,47 @@ function startScreenSevenSequence(){
   stopNarration();
   if(state.view!=='lesson'||state.screen!==7)return;
   speak(SCREEN_SEVEN_NARRATION,.78);
+}
+
+function readScreenSevenWords(){
+  stopNarration();
+  const run=++screenSevenRun,lessonIndex=state.lesson,root=document.querySelector('.fluencyPractice');
+  const words=[...root?.querySelectorAll('[data-screen-seven-word]')||[]],status=root?.querySelector('[data-screen-seven-status]');
+  if(state.view!=='lesson'||state.screen!==7||!root||!words.length||!status)return;
+  screenSevenRoot=root;
+  const clearHighlights=()=>words.forEach(word=>word.classList.remove('active'));
+  const isCurrent=()=>run===screenSevenRun&&state.view==='lesson'&&state.screen===7&&state.lesson===lessonIndex&&root.isConnected;
+  const fail=()=>{
+    if(!isCurrent())return;
+    clearHighlights();
+    status.textContent='Narration is unavailable. Select Hear the Words to try again.';
+    toast('Narration is unavailable. You can try Hear the Words again.');
+  };
+  const readWord=(index)=>{
+    if(!isCurrent())return;
+    if(index>=words.length){
+      clearHighlights();
+      status.textContent=`You heard all ${words.length} words.`;
+      return;
+    }
+    const word=words[index];
+    speak(word.dataset.speak,.68,{
+      onStart:(result={})=>{
+        if(!isCurrent()||result.unavailable)return;
+        clearHighlights();
+        word.classList.add('active');
+      },
+      onComplete:(result={})=>{
+        if(!isCurrent())return;
+        word.classList.remove('active');
+        if(result.error||result.unavailable){fail();return}
+        screenSevenTimer=setTimeout(()=>{if(isCurrent())readWord(index+1)},300);
+      }
+    });
+  };
+  clearHighlights();
+  status.textContent=`Reading all ${words.length} words aloud. Follow each highlighted word.`;
+  readWord(0);
 }
 
 function startScreenEightSequence(){
@@ -820,6 +862,7 @@ function completeScreenSeven(){
   const confetti=root?.querySelector('[data-screen-seven-confetti]'),status=root?.querySelector('[data-screen-seven-status]'),actions=[...document.querySelectorAll('[data-screen-seven-action]')];
   if(state.view!=='lesson'||state.screen!==7||!root||!confetti||!status||actions.length!==2)return;
   screenSevenRoot=root;
+  root.querySelectorAll('[data-screen-seven-word].active').forEach(word=>word.classList.remove('active'));
   actions.forEach(button=>button.disabled=true);
   root.classList.add('celebrating');
   status.textContent='Great reading!';
@@ -891,6 +934,8 @@ function bind(){
   document.querySelectorAll('[data-wrong]').forEach(x=>x.onclick=()=>toast('Look at the ending and try again.'));
   document.querySelectorAll('[data-build]').forEach(x=>x.onclick=()=>buildLessonWord(+x.dataset.build));
   document.querySelectorAll('[data-read]').forEach(x=>x.onclick=()=>{stopNarration();state.readIndex++;if(state.readIndex>=previousScreenWords().length){state.readIndex=0;goToLessonScreen(7);return}render();document.querySelector('[data-screen-six-word]')?.focus()});
+  document.querySelectorAll('[data-screen-seven-word]').forEach(x=>x.onclick=()=>{stopNarration();speak(x.dataset.speak)});
+  document.querySelectorAll('[data-screen-seven-read]').forEach(x=>x.onclick=readScreenSevenWords);
   document.querySelectorAll('[data-screen-seven-complete]').forEach(x=>x.onclick=completeScreenSeven);
   document.querySelectorAll('[data-screen-eight-read]').forEach(x=>x.onclick=readScreenEightSentences);
   document.querySelectorAll('[data-screen-eight-complete]').forEach(x=>x.onclick=completeScreenEight);

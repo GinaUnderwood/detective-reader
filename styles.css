@@ -47,6 +47,7 @@ h1,h2,h3,p{margin-top:0}
 .word mark{background:#dcecff;color:#285f9c;border-radius:8px;padding:4px}
 .fluencyWord{appearance:none;color:var(--ink);transition:border-color .15s ease,background .15s ease,transform .15s ease}
 .fluencyWord:hover,.fluencyWord:focus-visible{border-color:var(--green);background:#e8f6f1;outline:3px solid rgba(40,122,103,.2);outline-offset:2px}
+.fluencyWord.active{border-color:var(--gold);background:#fff4cf;box-shadow:0 10px 25px rgba(180,125,26,.24);transform:scale(1.08)}
 .fluencyWord:active{transform:translateY(1px)}
 .choice{border:2px solid var(--line);border-radius:15px;background:white;padding:18px 24px;font-size:25px;font-weight:900}
 .choice:hover,.choice.selected{border-color:var(--green);background:#e8f6f1}
@@ -132,10 +133,10 @@ h1,h2,h3,p{margin-top:0}
 @keyframes confettiFall{0%{opacity:0;transform:translate3d(0,-20px,0) rotate(0)}10%{opacity:1}100%{opacity:1;transform:translate3d(var(--drift),680px,0) rotate(var(--spin))}}
 @media(prefers-reduced-motion:reduce){
   .startCaseArrow,.flashWord.active,.screenFourWord.active,.rimeReveal .rimeWord mark,.revealContinuePrompt.ready .revealContinueArrow,.confettiLayer.active .confettiPiece{animation:none}
-  .flashWord,.screenFourWord{transition:none}
+  .flashWord,.screenFourWord,.fluencyWord{transition:none}
   .sentenceWord,.storyWord{transition:none}
   .spellingLine{transition:none}
-  .flashWord.active,.screenFourWord.active{transform:scale(1.03)}
+  .flashWord.active,.screenFourWord.active,.fluencyWord.active{transform:scale(1.03)}
   .revealContinuePrompt.ready .revealContinueArrow{opacity:1;visibility:visible;transform:none}
   .confettiLayer.active .confettiPiece{top:12%;opacity:.85;transform:none}
 }
