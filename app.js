@@ -250,6 +250,8 @@ const SCREEN_EIGHT_NARRATION='Now, read these sentences.';
 const SCREEN_EIGHT_CONFETTI_MS=3000;
 const SCREEN_NINE_NARRATION='Next, read the story.';
 const SCREEN_NINE_CONFETTI_MS=3000;
+const NATURAL_READ_ALOUD_RATE=.82;
+const NATURAL_HIGHLIGHT_FALLBACK_MS=420;
 const SCREEN_TEN_INSTRUCTIONS=[
   "Let's spell some words.",
   'Have your paper and pencil ready.',
@@ -309,9 +311,10 @@ function speak(text,rate=.78,callbacks={}){
   activeNarration=u;
   let finished=false,watchdogTimer=null;
   u.onstart=()=>{if(finished)return;if(callbacks.onStart)callbacks.onStart({unavailable:false})};
-  const finish=(error=false)=>{if(finished)return;finished=true;clearTimeout(watchdogTimer);if(activeNarration===u)activeNarration=null;if(callbacks.onComplete)callbacks.onComplete({error})};
+  u.onboundary=(event)=>{if(finished)return;if(callbacks.onBoundary)callbacks.onBoundary(event)};
+  const finish=(error=false,errorCode=null)=>{if(finished)return;finished=true;clearTimeout(watchdogTimer);if(activeNarration===u)activeNarration=null;if(callbacks.onComplete)callbacks.onComplete({error,errorCode})};
   u.onend=()=>finish(false);
-  u.onerror=()=>finish(true);
+  u.onerror=(event)=>finish(true,event?.error||null);
   speechSynthesis.speak(u);
   watchdogTimer=setTimeout(()=>{finish(true);speechSynthesis.cancel()},Math.max(5000,Math.min(20000,text.length*120)));
   activeNarrationTimer=watchdogTimer;
@@ -653,6 +656,63 @@ function startScreenEightSequence(){
   speak(SCREEN_EIGHT_NARRATION,.78);
 }
 
+function wordIndexForBoundary(text,charIndex,wordCount){
+  const matches=[...text.matchAll(/[A-Za-z]+(?:['’][A-Za-z]+)*/g)];
+  if(!matches.length||wordCount<1)return 0;
+  for(let matchIndex=0;matchIndex<matches.length;matchIndex++){
+    const start=matches[matchIndex].index,end=start+matches[matchIndex][0].length;
+    if(charIndex>=start&&charIndex<end)return Math.min(matchIndex,wordCount-1);
+    if(charIndex<start)return Math.min(matchIndex,wordCount-1);
+  }
+  return Math.min(matches.length-1,wordCount-1);
+}
+
+function readNaturalTextLines({lineTexts,wordGroups,status,isCurrent,schedule,cancelTimer,fail,completeText}){
+  const allWords=wordGroups.flat(),text=lineTexts.join(' '),textWordCount=(text.match(/[A-Za-z]+(?:['’][A-Za-z]+)*/g)||[]).length;
+  if(lineTexts.length!==wordGroups.length||wordGroups.some(group=>!group.length)||!allWords.length||textWordCount!==allWords.length)return;
+  const clearHighlights=()=>allWords.forEach(word=>word.classList.remove('active'));
+  const highlight=(word)=>{
+    clearHighlights();
+    word.classList.add('active');
+  };
+  let fallbackIndex=1,lastBoundaryIndex=-1;
+  const scheduleFallback=()=>{
+    if(fallbackIndex>=allWords.length)return;
+    schedule(()=>{
+      if(!isCurrent())return;
+      highlight(allWords[fallbackIndex]);
+      fallbackIndex++;
+      scheduleFallback();
+    },NATURAL_HIGHLIGHT_FALLBACK_MS);
+  };
+  clearHighlights();
+  status.textContent='Reading naturally. Follow each highlighted word.';
+  speak(text,NATURAL_READ_ALOUD_RATE,{
+    onStart:(result={})=>{
+      if(!isCurrent()||result.unavailable)return;
+      highlight(allWords[0]);
+      scheduleFallback();
+    },
+    onBoundary:(event={})=>{
+      if(!isCurrent()||!Number.isFinite(event.charIndex)||(event.name&&event.name!=='word'))return;
+      const wordIndex=wordIndexForBoundary(text,event.charIndex,allWords.length);
+      if(wordIndex<=lastBoundaryIndex)return;
+      cancelTimer();
+      highlight(allWords[wordIndex]);
+      lastBoundaryIndex=wordIndex;
+      fallbackIndex=wordIndex+1;
+      scheduleFallback();
+    },
+    onComplete:(result={})=>{
+      if(!isCurrent())return;
+      cancelTimer();
+      clearHighlights();
+      if(result.error||result.unavailable){fail();return}
+      status.textContent=completeText;
+    }
+  });
+}
+
 function readScreenEightSentences(){
   stopNarration();
   const run=++screenEightRun,lessonIndex=state.lesson,root=document.querySelector('.sentencePractice');
@@ -667,28 +727,9 @@ function readScreenEightSentences(){
     status.textContent='Narration is unavailable. Select Read to Me to try again.';
     toast('Narration is unavailable. You can try Read to Me again.');
   };
-  const readWord=(index)=>{
-    if(!isCurrent())return;
-    if(index>=words.length){clearHighlights();status.textContent='You heard all the sentences.';return}
-    const word=words[index];
-    speak(word.dataset.spoken,.7,{
-      onStart:(result={})=>{
-        if(!isCurrent()||result.unavailable)return;
-        clearHighlights();
-        word.classList.add('active');
-      },
-      onComplete:(result={})=>{
-        if(!isCurrent())return;
-        word.classList.remove('active');
-        if(result.error||result.unavailable){fail();return}
-        const pause=word.dataset.sentenceEnd==='true'?360:90;
-        screenEightTimer=setTimeout(()=>{if(isCurrent())readWord(index+1)},pause);
-      }
-    });
-  };
-  clearHighlights();
-  status.textContent='Reading aloud. Follow each highlighted word.';
-  readWord(0);
+  const lineTexts=SENTENCE_SETS[lessonIndex],wordGroups=lineTexts.map((_,lineIndex)=>words.filter(word=>Number(word.dataset.sentence)===lineIndex));
+  const schedule=(callback,delay)=>{screenEightTimer=setTimeout(()=>{if(isCurrent())callback()},delay)};
+  readNaturalTextLines({lineTexts,wordGroups,status,isCurrent,schedule,cancelTimer:()=>clearTimeout(screenEightTimer),fail,completeText:'You heard all the sentences.'});
 }
 
 function completeScreenEight(){
@@ -729,28 +770,9 @@ function readScreenNineStory(){
     status.textContent='Narration is unavailable. Select Read to Me to try again.';
     toast('Narration is unavailable. You can try Read to Me again.');
   };
-  const readWord=(index)=>{
-    if(!isCurrent())return;
-    if(index>=words.length){clearHighlights();status.textContent='You heard the story.';return}
-    const word=words[index];
-    speak(word.dataset.spoken,.7,{
-      onStart:(result={})=>{
-        if(!isCurrent()||result.unavailable)return;
-        clearHighlights();
-        word.classList.add('active');
-      },
-      onComplete:(result={})=>{
-        if(!isCurrent())return;
-        word.classList.remove('active');
-        if(result.error||result.unavailable){fail();return}
-        const pause=word.dataset.sentenceEnd==='true'?360:90;
-        screenNineTimer=setTimeout(()=>{if(isCurrent())readWord(index+1)},pause);
-      }
-    });
-  };
-  clearHighlights();
-  status.textContent='Reading aloud. Follow each highlighted word.';
-  readWord(0);
+  const lineTexts=STORY_SETS[lessonIndex],wordGroups=lineTexts.map((_,lineIndex)=>words.filter(word=>Number(word.dataset.storyLine)===lineIndex));
+  const schedule=(callback,delay)=>{screenNineTimer=setTimeout(()=>{if(isCurrent())callback()},delay)};
+  readNaturalTextLines({lineTexts,wordGroups,status,isCurrent,schedule,cancelTimer:()=>clearTimeout(screenNineTimer),fail,completeText:'You heard the story.'});
 }
 
 function completeScreenNine(){
