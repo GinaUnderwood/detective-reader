@@ -832,8 +832,7 @@ function readScreenNineStory(){
   const fail=()=>{
     if(!isCurrent())return;
     clearHighlights();
-    status.textContent='Narration is unavailable. Select Read to Me to try again.';
-    toast('Narration is unavailable. You can try Read to Me again.');
+    status.textContent='';
   };
   const lineTexts=STORY_SETS[lessonIndex],wordGroups=lineTexts.map((_,lineIndex)=>words.filter(word=>Number(word.dataset.storyLine)===lineIndex));
   const schedule=(callback,delay)=>{screenNineTimer=setTimeout(()=>{if(isCurrent())callback()},delay)};
