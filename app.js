@@ -228,7 +228,13 @@ function chooseScreenFiveWords(){
 function prepareScreenFive(){state.buildWords=chooseScreenFiveWords();state.buildIndex=null}
 function resetScreenFive(){state.buildWords=[];state.buildIndex=null}
 function screenFiveWords(){if(!state.buildWords.length)prepareScreenFive();return state.buildWords}
-const FEMALE_NARRATOR_PRIORITIES=['Microsoft Aria Online (Natural)','Microsoft Jenny Online (Natural)','Microsoft Ava Online (Natural)','Microsoft Emma Multilingual Online (Natural)','Microsoft Aria','Microsoft Jenny','Microsoft Ava','Microsoft Emma','Google UK English Female','Google US English','Samantha','Ava','Emma','Allison','Zira','Victoria','Karen','Moira','Tessa','Fiona','Libby','Sonia','Hazel','Susan','Serena','Kate','Veena','Joanna','Kendra','Kimberly','Ivy','Salli'];
+const NATURAL_FEMALE_NARRATOR_PRIORITIES=[
+  'Microsoft Jenny Online Natural','Microsoft Aria Online Natural','Microsoft AvaMultilingual Online Natural','Microsoft Ava Online Natural','Microsoft EmmaMultilingual Online Natural','Microsoft Emma Online Natural','Microsoft Michelle Online Natural',
+  'en US Jenny Multilingual Neural','en US Jenny Neural','en US Aria Neural','en US Ava Multilingual Neural','en US Ava Neural','en US Emma Neural','en US Michelle Neural','en US Phoebe Multilingual Neural','en US Nova Turbo Multilingual Neural','en US Shimmer Turbo Multilingual Neural'
+];
+const FEMALE_NARRATOR_FALLBACKS=['Microsoft Jenny','Microsoft Aria','Microsoft Ava','Microsoft Emma','Google US English','Google UK English Female','Samantha','Ava','Emma','Allison','Victoria','Karen','Moira','Tessa','Fiona','Libby','Sonia','Hazel','Susan','Serena','Kate','Veena','Joanna','Kendra','Kimberly','Ivy','Salli','Zira'];
+const FEMALE_NARRATOR_PERSONAS=['jenny','aria','avamultilingual','ava','emmamultilingual','emma','michelle','phoebe','nova','shimmer','cora','jane','sara','nancy','amber','ashley','elizabeth','samantha','allison','victoria','karen','moira','tessa','fiona','libby','sonia','hazel','susan','serena','kate','veena','joanna','kendra','kimberly','ivy','salli','zira'];
+const NATURAL_NARRATOR_QUALITY_HINTS=['natural','neural','premium','enhanced','online'];
 let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer=null,activeNarrationTimer=null,narratorUnavailable=false;
 let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null,screenThreeRoot=null,screenFourRun=0,screenFourTimer=null,screenFourRoot=null;
 let screenSevenRun=0,screenSevenTimer=null,screenSevenRoot=null;
@@ -279,11 +285,23 @@ const SCREEN_TWELVE_CONFETTI_MS=SCREEN_FOUR_CONFETTI_MS;
 const SCREEN_THIRTEEN_NARRATION='You are so close to finishing the case. Last step is to complete the Mastery check. Say each word. Click below for the next word.';
 const SCREEN_THIRTEEN_CONFETTI_MS=3000;
 const SCREEN_FOURTEEN_NARRATION='Congratulations, Detective Reader! Give yourself a pat on the back! You solved the mystery reading pattern! Collect your rewards and gear up for the next case!';
+function normalizeVoiceName(value){return String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
+function compactVoiceName(value){return normalizeVoiceName(value).replace(/\s+/g,'')}
+function isNaturalNarratorVoice(voice){const name=compactVoiceName(voice?.name);return NATURAL_NARRATOR_QUALITY_HINTS.some(hint=>name.includes(hint))}
+function hasFemaleNarratorIdentity(voice){
+  const name=normalizeVoiceName(voice?.name),compact=compactVoiceName(name);
+  return name.split(' ').includes('female')||FEMALE_NARRATOR_PERSONAS.some(persona=>compact.includes(persona));
+}
+function findPreferredNarratorVoice(voices,priorities){
+  for(const preferred of priorities){const wanted=compactVoiceName(preferred),match=voices.find(voice=>compactVoiceName(voice.name).includes(wanted));if(match)return match}
+  return null;
+}
 function chooseNarratorVoice(voices){
-  const english=voices.filter(v=>/^en(?:[-_]|$)/i.test(v.lang||''));
+  const english=voices.filter(voice=>/^en(?:[-_]|$)/i.test(voice.lang||''));
   if(!english.length)return null;
-  for(const preferred of FEMALE_NARRATOR_PRIORITIES){const wanted=preferred.toLowerCase(),match=english.find(v=>{const name=v.name.toLowerCase();return wanted.includes(' ')?name.includes(wanted):name.split(/[^a-z]+/).includes(wanted)});if(match)return match}
-  return english.find(v=>/\bfemale\b/i.test(v.name))||null;
+  const ordered=[...english.filter(voice=>/^en[-_]US$/i.test(voice.lang||'')),...english.filter(voice=>!/^en[-_]US$/i.test(voice.lang||''))];
+  const naturalFemale=ordered.filter(voice=>isNaturalNarratorVoice(voice)&&hasFemaleNarratorIdentity(voice));
+  return findPreferredNarratorVoice(naturalFemale,NATURAL_FEMALE_NARRATOR_PRIORITIES)||naturalFemale[0]||findPreferredNarratorVoice(ordered,FEMALE_NARRATOR_FALLBACKS)||ordered.find(voice=>normalizeVoiceName(voice.name).split(' ').includes('female'))||null;
 }
 function refreshNarratorVoice(){
   const selected=chooseNarratorVoice(speechSynthesis.getVoices());
@@ -317,7 +335,7 @@ function speak(text,rate=.78,callbacks={}){
   u.voice=narratorVoice;
   u.lang=narratorVoice.lang||'en-US';
   u.rate=rate;
-  u.pitch=1.04;
+  u.pitch=1;
   u.volume=1;
   activeNarration=u;
   let finished=false,watchdogTimer=null;
