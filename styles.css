@@ -75,6 +75,7 @@ h1,h2,h3,p{margin-top:0}
 .screenElevenInstruction{margin-bottom:8px;color:var(--green2);font-size:19px;font-weight:900}
 .screenElevenPattern{min-height:118px;display:flex;align-items:center;justify-content:center;margin:0;color:var(--blue);font-size:clamp(58px,10vw,92px);font-weight:900;letter-spacing:.08em;opacity:0;visibility:hidden;transform:scale(.82)}
 .screenElevenPattern.active{visibility:visible;animation:casePatternFlash .42s ease-in-out infinite alternate}
+.screenElevenPattern.revealed{opacity:1;visibility:visible;transform:scale(1);filter:none}
 .patternHunt .choiceRow{margin-top:12px}
 .story{max-width:700px;text-align:left;font-size:20px;line-height:1.8;background:white;border:1px solid var(--line);border-radius:16px;padding:26px}
 .story p:last-child{margin-bottom:0}
