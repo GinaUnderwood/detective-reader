@@ -502,7 +502,7 @@ function storyLine(line,lineIndex){
 function flashWordCards(words){return `<div class="wordRow flashWordRow" aria-label="Words to listen for">${words.map(w=>`<div class="word flashWord" data-flash-word="${w}">${w}</div>`).join('')}</div>`}
 function screenFourWordCards(words){return `<div class="wordRow" aria-label="Words to read together">${words.map((w,i)=>`<div class="word screenFourWord" data-screen-four-word="${i}">${w}</div>`).join('')}</div>`}
 function screenTwelveWords(){return ['ch','tr','sl','gr','dr'].map(onset=>onset+ending()).filter(word=>word.toLowerCase()!=='chit')}
-function screenTwelveWordCards(words){return `<div class="wordRow" aria-label="Challenge words to read together">${words.map((w,i)=>`<div class="word screenFourWord" data-screen-twelve-word="${i}">${w}</div>`).join('')}</div>`}
+function screenTwelveWordCards(words){return `<div class="wordRow challengeWordRow" aria-label="Challenge words with optional audio">${words.map((w,i)=>`<div class="screenTwelveWordItem"><div class="word screenFourWord" data-screen-twelve-word="${i}">${w}</div><button class="secondary hearWordsButton screenTwelveHearWord" data-screen-twelve-control data-speak="${w}" aria-label="Hear the word ${w}"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the word</span></button></div>`).join('')}</div>`}
 function lessonConfetti(screen){const colors=['#e4a83d','#287a67','#3c74b9','#e56b6f','#8f6ccf','#f3c84b'];return `<div class="confettiLayer" data-${screen}-confetti aria-hidden="true">${Array.from({length:42},(_,i)=>`<span class="confettiPiece" style="--x:${(i*37)%101}%;--delay:${(i*43)%520}ms;--duration:${1850+(i*71)%520}ms;--drift:${((i*29)%101)-50}px;--spin:${360+(i*97)%720}deg;--confetti:${colors[i%colors.length]}"></span>`).join('')}</div>`}
 function screenThreeConfetti(){return lessonConfetti('screen-three')}
 function screenFourConfetti(){return lessonConfetti('screen-four')}
@@ -525,7 +525,7 @@ function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="s
   if(s===9){const lines=STORY_SETS[state.lesson];return lessonFrame(`${screenNineConfetti()}${tag(9)}<h1>The ${l.pattern} Case</h1><div class="story" aria-label="Decodable story">${lines.map(storyLine).join('')}</div><p class="screenNineStatus" data-screen-nine-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-nine-action data-screen-nine-read>🔊 Read to Me</button><button class="primary" data-screen-nine-action data-screen-nine-complete>I read it ✓ →</button></div>`)}
   if(s===10){const words=spellingWordsForLesson();return lessonFrame(`${tag(10)}<h1>Spelling</h1><p class="spellingInstruction" data-screen-ten-status aria-live="polite" aria-atomic="true">Get your paper and pencil ready. Listen for directions.</p><ol class="spellingLines" aria-label="Five-word spelling test">${words.map((_,index)=>`<li class="spellingLine" data-screen-ten-line="${index}" aria-label="Spelling word ${index+1}, waiting"><span class="spellingWord" data-screen-ten-word="${index}" aria-hidden="true"></span></li>`).join('')}</ol><p class="spellingHint">Say, unblend, spell aloud, write, then check each word.</p><div class="footerActions"><button class="primary" data-next="11" data-screen-ten-continue disabled>Continue →</button></div>`)}
   if(s===11){const distract=['cat','dog','map','sun','fan','hen','pig','cup','box','red'].filter(word=>!word.toLowerCase().endsWith(ending())&&!l.words.some(item=>item.toLowerCase()===word.toLowerCase())).slice(0,5);const words=[...l.words,...distract];return lessonFrame(`${tag(11)}<h1>Review: Pattern Hunt</h1><p class="screenElevenInstruction">Click on the words that match this case pattern.</p><div class="screenElevenPattern ${state.huntReady?'revealed':''}" data-screen-eleven-pattern aria-live="polite" aria-hidden="${state.huntReady?'false':'true'}">${l.pattern}</div><div class="choiceRow" aria-label="Words to check for the ${l.pattern} pattern">${words.map(w=>`<button class="choice ${state.hunt.includes(w)?'selected':''}" data-hunt="${w}" aria-pressed="${state.hunt.includes(w)}" ${state.huntReady?'':'disabled'}>${w}</button>`).join('')}</div><p>${state.hunt.length} clues found</p>${state.hunt.length>=l.words.length?nextButton(12):''}`)}
-  if(s===12){const big=screenTwelveWords();return lessonFrame(`${screenTwelveConfetti()}${tag(12)}<h1>Challenge clues</h1><p>You know ${l.pattern}. Try these challenge words.</p>${screenTwelveWordCards(big)}<p class="screenFourQuestion" data-screen-twelve-status aria-live="polite">${SCREEN_TWELVE_NARRATION}</p><p class="clue">These are prototype transfer examples. A reading specialist should approve each final challenge list before production.</p><div class="footerActions"><button class="secondary hearWordsButton" data-screen-twelve-action data-screen-twelve-read aria-label="Hear all the challenge words" disabled><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-screen-twelve-action data-screen-twelve-complete disabled>Continue →</button></div>`)}
+  if(s===12){const big=screenTwelveWords();return lessonFrame(`${screenTwelveConfetti()}${tag(12)}<h1>Challenge clues</h1><p>You know ${l.pattern}. Try these challenge words.</p>${screenTwelveWordCards(big)}<p class="screenFourQuestion" data-screen-twelve-status aria-live="polite">${SCREEN_TWELVE_NARRATION}</p><p class="clue">These are prototype transfer examples. A reading specialist should approve each final challenge list before production.</p><div class="footerActions"><button class="primary" data-screen-twelve-control data-screen-twelve-complete>Continue →</button></div>`)}
   if(s===13){const wordIndex=Math.min(state.mastery,9),w=l.words[wordIndex%l.words.length];return lessonFrame(`${screenThirteenConfetti()}${tag(13)}<h1>Mastery check</h1><p class="screenThirteenStatus" data-screen-thirteen-status aria-live="polite">${SCREEN_THIRTEEN_NARRATION}</p><p>No hints. Say the word.</p><div class="word" data-screen-thirteen-word tabindex="-1" aria-live="polite" aria-label="Mastery word ${wordIndex+1} of 10: ${w}">${w}</div><p>Word ${wordIndex+1} of 10</p><div class="footerActions"><button class="primary" data-screen-thirteen-action data-mastered>I read it ✓ →</button></div>`)}
   return lessonFrame(`${screenFourteenConfetti()}${tag(14)}<div class="bigReward">🎉🔎</div><h1>Case solved!</h1><p class="screenFourteenStatus" data-screen-fourteen-status aria-live="polite">${SCREEN_FOURTEEN_NARRATION}</p><p>You discovered the <strong>${l.pattern}</strong> pattern.</p><div class="choiceRow"><span class="pill coin">${state.completed.includes(state.lesson)?'🪙 Rewards collected':'🪙 +10 coins'}</span><span class="badge">🏅 Pattern Detective Badge</span><span class="pill">⭐ 10 stars</span></div><button class="primary" data-screen-fourteen-action data-collect disabled>Collect rewards</button>`)
 }
@@ -970,52 +970,28 @@ function startScreenElevenSequence(){
   speak(SCREEN_ELEVEN_NARRATION,.78,{onComplete:()=>flashPattern()});
 }
 
-function startScreenTwelveSequence(includeIntroduction=true){
+function startScreenTwelveSequence(){
   stopNarration();
-  const run=++screenTwelveRun,lessonIndex=state.lesson,words=screenTwelveWords(),root=document.querySelector('.challengeWords');
-  const status=root?.querySelector('[data-screen-twelve-status]'),readButton=root?.querySelector('[data-screen-twelve-read]'),continueButton=root?.querySelector('[data-screen-twelve-complete]'),cards=[...root?.querySelectorAll('[data-screen-twelve-word]')||[]],confetti=root?.querySelector('[data-screen-twelve-confetti]');
-  if(state.view!=='lesson'||state.screen!==12||!root||!status||!readButton||!continueButton||!confetti||cards.length!==words.length)return;
+  const root=document.querySelector('.challengeWords');
+  const status=root?.querySelector('[data-screen-twelve-status]'),continueButton=root?.querySelector('[data-screen-twelve-complete]'),hearButtons=[...root?.querySelectorAll('.screenTwelveHearWord')||[]],cards=[...root?.querySelectorAll('[data-screen-twelve-word]')||[]],confetti=root?.querySelector('[data-screen-twelve-confetti]');
+  if(state.view!=='lesson'||state.screen!==12||!root||!status||!continueButton||!confetti||cards.length!==screenTwelveWords().length||hearButtons.length!==cards.length)return;
   screenTwelveRoot=root;
   confetti.classList.remove('active');
   root.classList.remove('celebrating');
-  const clearWordHighlights=()=>cards.forEach(card=>card.classList.remove('active'));
-  clearWordHighlights();
-  readButton.disabled=true;
-  continueButton.disabled=true;
+  cards.forEach(card=>card.classList.remove('active'));
+  hearButtons.forEach(button=>button.disabled=false);
+  continueButton.disabled=false;
   status.textContent=SCREEN_TWELVE_NARRATION;
-  const isCurrent=()=>run===screenTwelveRun&&state.view==='lesson'&&state.screen===12&&state.lesson===lessonIndex&&root.isConnected&&status.isConnected;
-  const wait=(next,delay)=>{screenTwelveTimer=setTimeout(()=>{if(isCurrent())next()},delay)};
-  const finishReading=()=>{if(!isCurrent())return;clearWordHighlights();status.textContent='You read all the challenge words.';readButton.disabled=false;continueButton.disabled=false};
-  const fail=()=>{if(!isCurrent())return;clearWordHighlights();status.textContent='Narration is unavailable. Read the challenge words, then continue.';readButton.disabled=false;continueButton.disabled=false;toast('Narration is unavailable. Select Play to try again, or continue.')};
-  const speakStage=(text,label,next=null,rate=.72,pause=350,activeCard=null)=>{
-    if(!isCurrent())return;
-    status.textContent=label;
-    speak(text,rate,{onStart:(result={})=>{
-      if(!isCurrent()||result.unavailable||!activeCard)return;
-      clearWordHighlights();
-      activeCard.classList.add('active');
-    },onComplete:(result={})=>{
-      if(!isCurrent())return;
-      if(activeCard)activeCard.classList.remove('active');
-      if(result.error||result.unavailable){fail();return}
-      if(next)wait(next,pause);
-    }});
-  };
-  const readWord=(index)=>{
-    if(index>=words.length){finishReading();return}
-    speakStage(words[index],`Word ${index+1}: ${words[index]}`,()=>readWord(index+1),.68,350,cards[index]);
-  };
-  if(includeIntroduction)speakStage(SCREEN_TWELVE_NARRATION,SCREEN_TWELVE_NARRATION,()=>readWord(0),.78,400);
-  else readWord(0);
+  speak(SCREEN_TWELVE_NARRATION,.78);
 }
 
 function completeScreenTwelve(){
   stopNarration();
   const run=++screenTwelveRun,lessonIndex=state.lesson,root=document.querySelector('.challengeWords');
-  const status=root?.querySelector('[data-screen-twelve-status]'),continueButton=root?.querySelector('[data-screen-twelve-complete]'),actions=[...root?.querySelectorAll('[data-screen-twelve-action]')||[]],cards=[...root?.querySelectorAll('[data-screen-twelve-word]')||[]],confetti=root?.querySelector('[data-screen-twelve-confetti]');
-  if(state.view!=='lesson'||state.screen!==12||!root||!status||!continueButton||!confetti||actions.length!==2||cards.length!==screenTwelveWords().length||continueButton.disabled)return;
+  const status=root?.querySelector('[data-screen-twelve-status]'),continueButton=root?.querySelector('[data-screen-twelve-complete]'),controls=[...root?.querySelectorAll('[data-screen-twelve-control]')||[]],hearButtons=[...root?.querySelectorAll('.screenTwelveHearWord')||[]],cards=[...root?.querySelectorAll('[data-screen-twelve-word]')||[]],confetti=root?.querySelector('[data-screen-twelve-confetti]');
+  if(state.view!=='lesson'||state.screen!==12||!root||!status||!continueButton||!confetti||cards.length!==screenTwelveWords().length||hearButtons.length!==cards.length||controls.length!==hearButtons.length+1||continueButton.disabled)return;
   screenTwelveRoot=root;
-  actions.forEach(button=>button.disabled=true);
+  controls.forEach(button=>button.disabled=true);
   cards.forEach(card=>card.classList.remove('active'));
   status.textContent='Great challenge reading!';
   root.classList.add('celebrating');
@@ -1239,7 +1215,6 @@ function bind(){
   document.querySelectorAll('[data-screen-nine-read]').forEach(x=>x.onclick=readScreenNineStory);
   document.querySelectorAll('[data-screen-nine-complete]').forEach(x=>x.onclick=completeScreenNine);
   document.querySelectorAll('[data-hunt]').forEach(x=>x.onclick=()=>{const w=x.dataset.hunt;if(w.toLowerCase().endsWith(ending())&&!state.hunt.includes(w)){state.hunt.push(w);toast('Pattern clue found!')}else if(!w.toLowerCase().endsWith(ending()))toast('That word belongs to another case.');render()});
-  document.querySelectorAll('[data-screen-twelve-read]').forEach(x=>x.onclick=()=>startScreenTwelveSequence(false));
   document.querySelectorAll('[data-screen-twelve-complete]').forEach(x=>x.onclick=completeScreenTwelve);
   document.querySelectorAll('[data-mastered]').forEach(x=>x.onclick=advanceScreenThirteen);
   document.querySelectorAll('[data-collect]').forEach(x=>x.onclick=()=>collectScreenFourteen(x));
