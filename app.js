@@ -260,8 +260,8 @@ const SCREEN_EIGHT_NARRATION='Now, read these sentences.';
 const SCREEN_EIGHT_CONFETTI_MS=3000;
 const SCREEN_NINE_NARRATION='Next, read the story.';
 const SCREEN_NINE_CONFETTI_MS=3000;
-const NATURAL_READ_ALOUD_RATE=.78;
-const NATURAL_HIGHLIGHT_FALLBACK_MS=440;
+const NATURAL_READ_ALOUD_RATE=.74;
+const NATURAL_HIGHLIGHT_FALLBACK_MS=465;
 const SCREEN_TEN_INSTRUCTIONS=[
   "Let's spell some words.",
   'Have your paper and pencil ready.',
