@@ -411,8 +411,8 @@ function stopNarration(){
     screenTenRoot.querySelectorAll('[data-screen-ten-word]').forEach(word=>word.textContent='');
     const status=screenTenRoot.querySelector('[data-screen-ten-status]');
     if(status)status.textContent='Get your paper and pencil ready. Listen for directions.';
-    const button=screenTenRoot.querySelector('[data-screen-ten-continue]');
-    if(button)button.disabled=true;
+    const button=screenTenRoot.querySelector('[data-screen-ten-forward]');
+    if(button)button.disabled=false;
   }
   if(screenElevenRoot?.isConnected){
     const pattern=screenElevenRoot.querySelector('[data-screen-eleven-pattern]');
@@ -523,7 +523,7 @@ function renderLesson(){const l=lesson(),s=state.screen,tag=(n)=>`<span class="s
   if(s===7){const words=previousScreenWords();return lessonFrame(`${screenSevenConfetti()}${tag(7)}<h1>Build fluency</h1><p>Read these as smoothly as you can.</p>${fluencyWordButtons(words)}<p class="screenSevenStatus" data-screen-seven-status aria-live="polite"></p><div class="footerActions"><button class="secondary hearWordsButton" data-screen-seven-action data-screen-seven-read aria-label="Hear all the Words"><span class="humanEarIcon" aria-hidden="true">👂</span><span>Hear the Words</span></button><button class="primary" data-screen-seven-action data-screen-seven-complete>I read them ✓ →</button></div>`)}
   if(s===8){const lines=SENTENCE_SETS[state.lesson];return lessonFrame(`${screenEightConfetti()}${tag(8)}<h1>Read the sentences</h1><div class="sentenceList" aria-label="Sentences to read">${lines.map(sentenceLine).join('')}</div><p class="screenEightStatus" data-screen-eight-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-eight-action data-screen-eight-read>🔊 Read to Me</button><button class="primary" data-screen-eight-action data-screen-eight-complete>I read them ✓ →</button></div>`)}
   if(s===9){const lines=STORY_SETS[state.lesson];return lessonFrame(`${screenNineConfetti()}${tag(9)}<h1>The ${l.pattern} Case</h1><div class="story" aria-label="Decodable story">${lines.map(storyLine).join('')}</div><p class="screenNineStatus" data-screen-nine-status aria-live="polite"></p><div class="footerActions"><button class="secondary" data-screen-nine-action data-screen-nine-read>🔊 Read to Me</button><button class="primary" data-screen-nine-action data-screen-nine-complete>I read it ✓ →</button></div>`)}
-  if(s===10){const words=spellingWordsForLesson();return lessonFrame(`${tag(10)}<h1>Spelling</h1><p class="spellingInstruction" data-screen-ten-status aria-live="polite" aria-atomic="true">Get your paper and pencil ready. Listen for directions.</p><ol class="spellingLines" aria-label="Five-word spelling test">${words.map((_,index)=>`<li class="spellingLine" data-screen-ten-line="${index}" aria-label="Spelling word ${index+1}, waiting"><span class="spellingWord" data-screen-ten-word="${index}" aria-hidden="true"></span></li>`).join('')}</ol><p class="spellingHint">Say, unblend, spell aloud, write, then check each word.</p><div class="footerActions"><button class="primary" data-next="11" data-screen-ten-continue disabled>Continue →</button></div>`)}
+  if(s===10){const words=spellingWordsForLesson();return lessonFrame(`${tag(10)}<h1>Spelling</h1><p class="spellingInstruction" data-screen-ten-status aria-live="polite" aria-atomic="true">Get your paper and pencil ready. Listen for directions.</p><ol class="spellingLines" aria-label="Five-word spelling test">${words.map((_,index)=>`<li class="spellingLine" data-screen-ten-line="${index}" aria-label="Spelling word ${index+1}, waiting"><span class="spellingWord" data-screen-ten-word="${index}" aria-hidden="true"></span></li>`).join('')}</ol><p class="spellingHint">Spelling is optional. Practice the words, or select Forward to skip to the next screen.</p><div class="footerActions"><button class="primary" data-next="11" data-screen-ten-forward aria-label="Forward to Pattern Hunt; skip spelling">Forward →</button></div>`)}
   if(s===11){const distract=['cat','dog','map','sun','fan','hen','pig','cup','box','red'].filter(word=>!word.toLowerCase().endsWith(ending())&&!l.words.some(item=>item.toLowerCase()===word.toLowerCase())).slice(0,5);const words=[...l.words,...distract];return lessonFrame(`${tag(11)}<h1>Review: Pattern Hunt</h1><p class="screenElevenInstruction">Click on the words that match this case pattern.</p><div class="screenElevenPattern ${state.huntReady?'revealed':''}" data-screen-eleven-pattern aria-live="polite" aria-hidden="${state.huntReady?'false':'true'}">${l.pattern}</div><div class="choiceRow" aria-label="Words to check for the ${l.pattern} pattern">${words.map(w=>`<button class="choice ${state.hunt.includes(w)?'selected':''}" data-hunt="${w}" aria-pressed="${state.hunt.includes(w)}" ${state.huntReady?'':'disabled'}>${w}</button>`).join('')}</div><p>${state.hunt.length} clues found</p>${state.hunt.length>=l.words.length?nextButton(12):''}`)}
   if(s===12){const big=screenTwelveWords();return lessonFrame(`${screenTwelveConfetti()}${tag(12)}<h1>Challenge clues</h1><p>You know ${l.pattern}. Try these challenge words.</p>${screenTwelveWordCards(big)}<p class="screenFourQuestion" data-screen-twelve-status aria-live="polite">${SCREEN_TWELVE_NARRATION}</p><p class="clue">These are prototype transfer examples. A reading specialist should approve each final challenge list before production.</p><div class="footerActions"><button class="primary" data-screen-twelve-control data-screen-twelve-complete>Continue →</button></div>`)}
   if(s===13){const wordIndex=Math.min(state.mastery,9),w=l.words[wordIndex%l.words.length];return lessonFrame(`${screenThirteenConfetti()}${tag(13)}<h1>Mastery check</h1><p class="screenThirteenStatus" data-screen-thirteen-status aria-live="polite">${SCREEN_THIRTEEN_NARRATION}</p><p>No hints. Say the word.</p><div class="word" data-screen-thirteen-word tabindex="-1" aria-live="polite" aria-label="Mastery word ${wordIndex+1} of 10: ${w}">${w}</div><p>Word ${wordIndex+1} of 10</p><div class="footerActions"><button class="primary" data-screen-thirteen-action data-mastered>I read it ✓ →</button></div>`)}
@@ -862,10 +862,10 @@ function startScreenTenSequence(){
   stopNarration();
   const run=++screenTenRun,lessonIndex=state.lesson,root=document.querySelector('.spellingPractice');
   const lines=[...root?.querySelectorAll('[data-screen-ten-line]')||[]],wordDisplays=[...root?.querySelectorAll('[data-screen-ten-word]')||[]];
-  const status=root?.querySelector('[data-screen-ten-status]'),continueButton=root?.querySelector('[data-screen-ten-continue]'),words=spellingWordsForLesson(lessonIndex);
-  if(state.view!=='lesson'||state.screen!==10||!root||lines.length!==5||wordDisplays.length!==5||!status||!continueButton||words.length!==5)return;
+  const status=root?.querySelector('[data-screen-ten-status]'),forwardButton=root?.querySelector('[data-screen-ten-forward]'),words=spellingWordsForLesson(lessonIndex);
+  if(state.view!=='lesson'||state.screen!==10||!root||lines.length!==5||wordDisplays.length!==5||!status||!forwardButton||words.length!==5)return;
   screenTenRoot=root;
-  continueButton.disabled=true;
+  forwardButton.disabled=false;
   lines.forEach((line,index)=>{
     line.classList.remove('active','complete');
     line.setAttribute('aria-label',`Spelling word ${index+1}, waiting`);
@@ -884,7 +884,7 @@ function startScreenTenSequence(){
       line.classList.add('complete');
       line.setAttribute('aria-label',`Spelling word ${index+1}: ${words[index]}`);
     });
-    continueButton.disabled=false;
+    forwardButton.disabled=false;
     status.textContent='Narration is unavailable. The five review words are shown. Select Play to try again.';
     toast('Narration is unavailable. Select Play to try again.');
   };
@@ -910,7 +910,7 @@ function startScreenTenSequence(){
       speakStage(SCREEN_TEN_REVIEW,.78,()=>{
         schedule(()=>{
           status.textContent='Spelling practice complete. Check and read each word.';
-          continueButton.disabled=false;
+          forwardButton.disabled=false;
         },SCREEN_TEN_REVIEW_WAIT_MS);
       });
       return;
