@@ -238,28 +238,6 @@
 
     .secondary-button { background: var(--paper); color: var(--ink); }
 
-    .challenge-word-item {
-      min-width: 98px;
-      display: flex;
-      flex: 1 1 30%;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 6px;
-    }
-
-    .challenge-word-item .word { min-width: 0; width: 100%; }
-
-    .hear-word-button {
-      min-height: 38px;
-      padding: 6px 5px;
-      border: 1px solid var(--ink);
-      border-radius: 8px;
-      background: var(--paper);
-      color: var(--ink);
-      font-size: 10px;
-      font-weight: 800;
-    }
-
     .device-home {
       width: 90px;
       height: 5px;
@@ -744,10 +722,10 @@
           <div class="lesson-progress" style="--p:85.7%"><span></span></div>
           <div class="screen-body">
             <p class="instruction">You know -ip. Try these challenge words.</p>
-            <div class="word-grid"><div class="challenge-word-item"><div class="word">chip</div><button class="hear-word-button">👂 HEAR THE WORD</button></div><div class="challenge-word-item"><div class="word">trip</div><button class="hear-word-button">👂 HEAR THE WORD</button></div><div class="challenge-word-item"><div class="word">slip</div><button class="hear-word-button">👂 HEAR THE WORD</button></div><div class="challenge-word-item"><div class="word">grip</div><button class="hear-word-button">👂 HEAR THE WORD</button></div><div class="challenge-word-item"><div class="word">drip</div><button class="hear-word-button">👂 HEAR THE WORD</button></div></div>
-            <p class="helper">On entry: “Now, you are ready for the Challenge words. Read these words. Some of the words may be nonsense words.” The words are not read automatically. Each HEAR THE WORD button reads only the word directly above it. Continue is available immediately and triggers confetti for 3 seconds before Screen 13 opens.</p>
+            <div class="word-grid"><div class="word">chip</div><div class="word">trip</div><div class="word">slip</div><div class="word">grip</div><div class="word">drip</div></div>
+            <p class="helper">On entry: “Now, you are ready for the Challenge words. Read these words. Some of the words may be nonsense words.” The words are not read automatically. HEAR THE WORDS reads every challenge word in order and highlights each word as it is spoken. Continue is available immediately and triggers confetti for 3 seconds before Screen 13 opens.</p>
           </div>
-          <div class="action-bar"><button class="primary-button">CONTINUE</button></div><div class="device-home"></div>
+          <div class="action-bar"><button class="secondary-button">👂 HEAR THE WORDS</button><button class="primary-button">CONTINUE</button></div><div class="device-home"></div>
         </article>
       </figure>
 
