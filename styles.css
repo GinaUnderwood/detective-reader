@@ -76,10 +76,11 @@ h1,h2,h3,p{margin-top:0}
 .screenElevenPattern{min-height:118px;display:flex;align-items:center;justify-content:center;margin:0;color:var(--blue);font-size:clamp(58px,10vw,92px);font-weight:900;letter-spacing:.08em;opacity:0;visibility:hidden;transform:scale(.82)}
 .screenElevenPattern.active{visibility:visible;animation:casePatternFlash .42s ease-in-out infinite alternate}
 .screenElevenPattern.revealed{opacity:1;visibility:visible;transform:scale(1);filter:none}
-.patternHunt .choiceRow{margin-top:12px}
+.patternHunt .choiceRow{margin:12px 0 16px}
+.patternHunt .choiceRow+p{margin-bottom:0}
 .story{max-width:700px;text-align:left;font-size:20px;line-height:1.8;background:white;border:1px solid var(--line);border-radius:16px;padding:26px}
 .story p:last-child{margin-bottom:0}
-.footerActions{margin-top:auto;display:flex;gap:10px;padding-top:25px}
+.footerActions{width:100%;margin-top:clamp(18px,3vh,28px);display:flex;justify-content:center;flex-wrap:wrap;gap:10px;padding-top:0}
 .startCasePrompt{margin-top:24px;align-items:center;justify-content:center;gap:14px}
 .startCaseArrow{color:var(--gold);font-size:38px;font-weight:900;line-height:1;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(122,83,18,.2));animation:pointToStart .7s ease-in-out infinite alternate}
 .startCaseButton{min-width:180px;font-size:18px}
@@ -118,6 +119,7 @@ h1,h2,h3,p{margin-top:0}
 .challengeWords.celebrating .wordRow{pointer-events:none}
 .masteryCheck.celebrating .word{pointer-events:none}
 .caseCelebration.collecting .footerActions{pointer-events:none}
+.caseCelebration .choiceRow{margin-bottom:0}
 .fluencyPractice.celebrating .wordRow{pointer-events:none}
 .sentencePractice.celebrating .sentenceList{pointer-events:none}
 .storyPractice.celebrating .story{pointer-events:none}
