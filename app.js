@@ -3,7 +3,6 @@ const LESSONS=[
   ['-it',['fit','sit','hit'],['bit','kit','lit']],
   ['-ip',['dip','lip','sip'],['hip','rip','tip']],
   ['-in',['fin','pin','win'],['bin','tin','chin']],
-  ['-is',['is','his','sis'],['this']],
   ['-id',['bid','did','hid'],['kid','lid','rid']],
   ['-ig',['big','dig','fig'],['gig','jig','pig']],
   ['-im',['dim','him','rim'],['slim','swim','trim']],
@@ -57,7 +56,6 @@ const SENTENCE_SETS=[
   ['I sit.','It is a kit.','Hit it.'],
   ['Sip it.','I see a rip.','This is the tip.'],
   ['The pin is in the tin.','I win.','The fin is in the bin.'],
-  ['His sis can sit.','Is this his kit?','This is his pin.'],
   ['The kid hid.','I see the lid.','I did this.'],
   ['The pig is big.','I can dig.','The fig is in the bin.'],
   ['It is dim.','I see him.','The rim is big.'],
@@ -114,7 +112,6 @@ const STORY_SETS=[
   ['I see a kit.','The kit is big.','I sit by it.'],
   ['I see the tip.','I put my lip on it.','I take a sip.'],
   ['I see a pin.','I put the pin in a tin.','I look at the tin.'],
-  ['His sis has a kit.','This is her kit.','She can sit with it.'],
   ['The kid hid the pin.','I did not see the pin.','The kid hid it well.'],
   ['The pig is big.','The pig can dig.','I see the pig.'],
   ['It is dim.','I see a lid.','The lid has a rim.'],
@@ -177,11 +174,21 @@ if(STORY_SETS.length!==LESSONS.length)throw new Error('Every lesson needs a deco
 
 const AVATARS=[['🦉','Owl Investigator'],['🦊','Fox Detective'],['🐱','Clue Cat'],['🤖','Robo Reader']];
 const SHOP=[['🎩','Detective Hat',40],['🔎','Golden Magnifier',50],['📓','Secret Notebook',35],['🧥','Mystery Cape',60],['🗺️','Treasure Map',45],['🧰','Clue Kit',55],['🏠','Treehouse Office',90],['🚲','Case Cruiser',75]];
+const LESSON_SEQUENCE_VERSION=2;
+const REMOVED_LEGACY_LESSON_INDEX=3;
 const saved=JSON.parse(localStorage.getItem('detectiveReader')||'{}');
-const state={view:'home',lesson:saved.lesson||0,screen:1,coins:saved.coins??120,avatar:saved.avatar||0,owned:saved.owned||[],completed:saved.completed||[],readIndex:0,buildWords:[],buildIndex:null,hunt:[],huntReady:false,mastery:0};
+const hasCurrentLessonSequence=saved.lessonSequenceVersion===LESSON_SEQUENCE_VERSION;
+function clampLessonIndex(value){const index=Number.isInteger(value)?value:0;return Math.min(LESSONS.length-1,Math.max(0,index))}
+function normalizeCompletedLessons(value){return[...new Set((Array.isArray(value)?value:[]).filter(Number.isInteger).filter(index=>index>=0&&index<LESSONS.length))]}
+function migrateLegacyLessonIndex(value){const index=Number.isInteger(value)?value:0;return clampLessonIndex(index>REMOVED_LEGACY_LESSON_INDEX?index-1:index)}
+function migrateLegacyCompletedLessons(value){return normalizeCompletedLessons((Array.isArray(value)?value:[]).filter(index=>index!==REMOVED_LEGACY_LESSON_INDEX).map(index=>index>REMOVED_LEGACY_LESSON_INDEX?index-1:index))}
+const savedLesson=hasCurrentLessonSequence?clampLessonIndex(saved.lesson):migrateLegacyLessonIndex(saved.lesson);
+const savedCompleted=hasCurrentLessonSequence?normalizeCompletedLessons(saved.completed):migrateLegacyCompletedLessons(saved.completed);
+const state={view:'home',lesson:savedLesson,screen:1,coins:saved.coins??120,avatar:saved.avatar||0,owned:saved.owned||[],completed:savedCompleted,readIndex:0,buildWords:[],buildIndex:null,hunt:[],huntReady:false,mastery:0};
 const app=document.querySelector('#app');
 
-function save(lessonIndex=state.lesson){localStorage.setItem('detectiveReader',JSON.stringify({lesson:lessonIndex,coins:state.coins,avatar:state.avatar,owned:state.owned,completed:state.completed}))}
+function save(lessonIndex=state.lesson){localStorage.setItem('detectiveReader',JSON.stringify({lessonSequenceVersion:LESSON_SEQUENCE_VERSION,lesson:lessonIndex,coins:state.coins,avatar:state.avatar,owned:state.owned,completed:state.completed}))}
+if(!hasCurrentLessonSequence)save();
 function lesson(){return LESSONS[state.lesson]}
 function keepReadingWords(){return lesson().keepReadingWords}
 function ending(){return lesson().pattern.slice(1)}
@@ -464,7 +471,7 @@ function render(){
 }
 
 function renderHome(){const l=lesson(),pct=Math.round((state.lesson+1)/LESSONS.length*100);return `<section class="hero"><div><span class="eyebrow">Detective headquarters</span><h1>New word case ready!</h1><p>Follow the clues, discover the pattern, and earn coins for your detective collection. Mistakes are clues—try again whenever you need to.</p><button class="primary" data-start>Open Case ${state.lesson+1}</button></div><div class="avatar">${AVATARS[state.avatar][0]}</div></section><div class="grid"><article class="card casecard"><span class="eyebrow">Current case</span><div class="pattern">${l.pattern}</div><h3>Word-Family Mystery</h3><p>${l.words.join(' · ')}</p></article><article class="card"><span class="eyebrow">Case progress</span><h3>${state.completed.length} cases solved</h3><div class="progress"><span style="width:${pct}%"></span></div><p>${pct}% through the short-vowel path</p></article><article class="card"><span class="eyebrow">Rewards</span><h3>🪙 ${state.coins} coins</h3><p>${state.owned.length} detective items collected</p><button class="secondary" data-view="rewards">Visit Detective Supply</button></article></div><section class="card" style="margin-top:20px"><span class="eyebrow">Next clues</span><div class="lessonList">${LESSONS.slice(state.lesson,state.lesson+10).map((x,i)=>`<button class="lessonChip ${i===0?'current':''}" data-lesson="${state.lesson+i}">${state.lesson+i+1}. ${x.pattern}</button>`).join('')}</div></section>`}
-function renderPath(){return `<span class="eyebrow">50 sequential cases</span><h1>Word-Family Case Map</h1><p>Cases unlock in a systematic short-vowel sequence.</p><div class="lessonList">${LESSONS.map((l,i)=>`<button class="lessonChip ${i===state.lesson?'current':''}" data-lesson="${i}">${state.completed.includes(i)?'✓ ':''}${i+1}. ${l.pattern}</button>`).join('')}</div>`}
+function renderPath(){return `<span class="eyebrow">${LESSONS.length} sequential cases</span><h1>Word-Family Case Map</h1><p>Cases unlock in a systematic short-vowel sequence.</p><div class="lessonList">${LESSONS.map((l,i)=>`<button class="lessonChip ${i===state.lesson?'current':''}" data-lesson="${i}">${state.completed.includes(i)?'✓ ':''}${i+1}. ${l.pattern}</button>`).join('')}</div>`}
 function renderRewards(){return `<span class="eyebrow">Detective profile</span><h1>Choose your investigator</h1><div class="avatarGrid">${AVATARS.map((a,i)=>`<button class="avatarItem ${i===state.avatar?'selected':''}" data-avatar="${i}">${a[0]}<small>${a[1]}</small></button>`).join('')}</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:34px"><div><span class="eyebrow">Detective supply shop</span><h1>Cash in earned coins</h1></div><span class="pill coin">🪙 ${state.coins}</span></div><p>Coins come only from learning activities. Every item has a fixed price—there are no random prizes or real-money purchases.</p><div class="shopGrid">${SHOP.map((s,i)=>`<article class="shopItem"><div class="icon">${s[0]}</div><h3>${s[1]}</h3><div class="price">🪙 ${s[2]}</div><button class="${state.owned.includes(i)?'secondary':'primary'}" data-buy="${i}" ${state.owned.includes(i)?'disabled':''}>${state.owned.includes(i)?'Owned':'Buy'}</button></article>`).join('')}</div>`}
 function renderProgress(){const accuracy=state.completed.length?'92%':'—';return `<span class="eyebrow">Grown-up view</span><h1>Reading Progress</h1><div class="grid"><article class="card"><h2>${state.completed.length}</h2><p>Lessons completed</p></article><article class="card"><h2>${state.completed.length*10}</h2><p>Words practiced</p></article><article class="card"><h2>${accuracy}</h2><p>Practice accuracy</p></article></div><section class="card" style="margin-top:20px"><h2>Current skill: ${lesson().pattern}</h2><p>Words to practice: ${lesson().words.join(', ')}</p><p>Progress is stored in this browser for the prototype.</p></section>`}
 
