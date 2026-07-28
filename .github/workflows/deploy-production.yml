@@ -77,6 +77,7 @@ jobs:
           docker run --rm \
             --env SITE_ADDRESS=:80 \
             --volume "${PWD}/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            --entrypoint caddy \
             caddy:2.11.4-alpine \
             validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
