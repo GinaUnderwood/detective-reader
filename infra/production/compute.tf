@@ -7,7 +7,7 @@ locals {
     CURRENT_RELEASE_PARAMETER=${aws_ssm_parameter.current_release.name}
     ECR_REPOSITORY_URL=${aws_ecr_repository.app.repository_url}
     SECRET_ID=${aws_secretsmanager_secret.azure_speech.arn}
-    SITE_ADDRESS=${local.site_address}
+    SITE_ADDRESS=${jsonencode(local.site_address)}
   EOT
 }
 

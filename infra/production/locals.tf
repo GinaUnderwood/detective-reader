@@ -7,7 +7,7 @@ locals {
     [for alias in var.domain_aliases : lower(alias)],
   )) : [":80"]
   site_address = join(", ", local.site_addresses)
-  secret_name       = var.azure_speech_secret_name != "" ? var.azure_speech_secret_name : "${var.project_name}/${var.environment}/azure-speech"
+  secret_name  = var.azure_speech_secret_name != "" ? var.azure_speech_secret_name : "${var.project_name}/${var.environment}/azure-speech"
 
   github_oidc_provider_arn = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
   github_subject           = "repo:${var.github_repository}:environment:${var.github_environment}"
