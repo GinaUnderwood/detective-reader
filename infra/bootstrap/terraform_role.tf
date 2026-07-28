@@ -71,6 +71,7 @@ data "aws_iam_policy_document" "terraform_production" {
       "secretsmanager:GetResourcePolicy",
       "secretsmanager:ListSecretVersionIds",
       "ssm:DescribeDocument",
+      "ssm:DescribeDocumentPermission",
       "ssm:DescribeParameters",
       "ssm:GetDocument",
       "ssm:GetParameter",
