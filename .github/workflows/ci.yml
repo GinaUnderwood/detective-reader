@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Install test dependencies
+        run: python -m pip install --requirement requirements-dev.txt
+
+      - name: Run Python tests
+        run: python -m pytest
+
+      - name: Compile Python sources
+        run: python -m compileall -q server tests
+
+      - name: Check browser JavaScript syntax
+        run: node --check app.js
+
+      - name: Run browser application smoke test
+        run: node tests/app-smoke.cjs
+
+      - name: Check deployment shell syntax
+        run: |
+          bash -n deploy/deploy-image.sh
+          bash -n deploy/start-image.sh
+          bash -n infra/production/templates/user-data.sh.tftpl
+
+      - name: Validate the Caddy configuration
+        run: |
+          docker run --rm \
+            --env SITE_ADDRESS=:80 \
+            --volume "${PWD}/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2.11.4-alpine \
+            validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Validate the production Compose model
+        run: |
+          sudo install -d -m 0700 /run/detective-reader
+          printf '%s\n' \
+            'AZURE_SPEECH_KEY=test-key' \
+            'AZURE_SPEECH_REGION=eastus' |
+            sudo tee /run/detective-reader/azure-speech.env >/dev/null
+          sudo chmod 0600 /run/detective-reader/azure-speech.env
+          APP_IMAGE='example.invalid/detective-reader@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
+            AWS_REGION=us-east-1 \
+            CLOUDWATCH_LOG_GROUP=/detective-reader/test \
+            SITE_ADDRESS=:80 \
+            docker compose --file deploy/compose.yaml config --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Build the production container
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          load: true
+          push: false
+          tags: detective-reader:ci
+
+      - name: Probe the production container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run \
+            --detach \
+            --name detective-reader-ci \
+            --env AZURE_SPEECH_KEY=test-key \
+            --env AZURE_SPEECH_REGION=eastus \
+            --env AZURE_SPEECH_VOICE=en-US-AvaNeural \
+            --publish 127.0.0.1:18080:8080 \
+            detective-reader:ci
+
+          cleanup() {
+            docker logs detective-reader-ci || true
+            docker rm --force detective-reader-ci >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:18080/api/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Container readiness probe did not succeed." >&2
+          exit 1

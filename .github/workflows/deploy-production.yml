@@ -1,0 +1,380 @@
+name: Deploy production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      image_digest:
+        description: "Existing ECR digest to deploy, including the sha256: prefix"
+        required: true
+        type: string
+      commit_sha:
+        description: "Full 40-character Git commit represented by that image"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and deploy immutable image
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+
+    concurrency:
+      group: detective-reader-production
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      TF_VAR_github_repository: ${{ github.repository }}
+      TF_VAR_github_environment: production
+      TF_VAR_instance_type: ${{ vars.INSTANCE_TYPE || 't3.micro' }}
+      TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+      TF_VAR_route53_zone_id: ${{ vars.ROUTE53_ZONE_ID }}
+      TF_VAR_alarm_sns_topic_arn: ${{ vars.ALARM_SNS_TOPIC_ARN }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Install test dependencies
+        run: python -m pip install --requirement requirements-dev.txt
+
+      - name: Verify the release source
+        run: |
+          python -m pytest
+          python -m compileall -q server tests
+          node --check app.js
+          node tests/app-smoke.cjs
+          bash -n deploy/deploy-image.sh
+          bash -n deploy/start-image.sh
+          bash -n infra/production/templates/user-data.sh.tftpl
+
+      - name: Validate the Caddy configuration
+        run: |
+          docker run --rm \
+            --env SITE_ADDRESS=:80 \
+            --volume "${PWD}/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2.11.4-alpine \
+            validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Validate the production Compose model
+        run: |
+          sudo install -d -m 0700 /run/detective-reader
+          printf '%s\n' \
+            'AZURE_SPEECH_KEY=test-key' \
+            'AZURE_SPEECH_REGION=eastus' |
+            sudo tee /run/detective-reader/azure-speech.env >/dev/null
+          sudo chmod 0600 /run/detective-reader/azure-speech.env
+          APP_IMAGE='example.invalid/detective-reader@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
+            AWS_REGION=us-east-1 \
+            CLOUDWATCH_LOG_GROUP=/detective-reader/test \
+            SITE_ADDRESS=:80 \
+            docker compose --file deploy/compose.yaml config --quiet
+
+      - name: Configure Terraform AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
+          role-session-name: detective-reader-terraform
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+
+      - name: Initialize infrastructure state
+        run: |
+          terraform -chdir=infra/production init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="region=${AWS_REGION}"
+
+      - name: Plan infrastructure
+        run: terraform -chdir=infra/production plan -out=production.tfplan
+
+      - name: Apply infrastructure before release
+        run: terraform -chdir=infra/production apply -auto-approve production.tfplan
+
+      - name: Export deployed infrastructure
+        id: infrastructure
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "deploy_role_arn=$(terraform -chdir=infra/production output -raw github_deploy_role_arn)" \
+            >>"${GITHUB_OUTPUT}"
+          {
+            echo "ECR_REPOSITORY=$(terraform -chdir=infra/production output -raw ecr_repository_name)"
+            echo "SSM_DOCUMENT_NAME=$(terraform -chdir=infra/production output -raw ssm_deploy_document_name)"
+            echo "SSM_TARGET_TAG=detective-reader-production"
+            echo "CURRENT_RELEASE_PARAMETER=$(terraform -chdir=infra/production output -raw current_release_parameter)"
+            echo "CLOUDWATCH_LOG_GROUP=$(terraform -chdir=infra/production output -raw cloudwatch_log_group)"
+            echo "PRODUCTION_URL=$(terraform -chdir=infra/production output -raw site_url)"
+          } >>"${GITHUB_ENV}"
+
+      - name: Configure deployment AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ steps.infrastructure.outputs.deploy_role_arn }}
+          role-session-name: detective-reader-deploy
+
+      - name: Resolve ECR registry
+        id: registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          account_id="$(aws sts get-caller-identity --query Account --output text)"
+          registry="${account_id}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          repository_url="${registry}/${ECR_REPOSITORY}"
+          echo "registry=${registry}" >>"${GITHUB_OUTPUT}"
+          echo "repository_url=${repository_url}" >>"${GITHUB_OUTPUT}"
+
+      - name: Check for an existing image for this commit
+        if: github.event_name == 'push'
+        id: existing
+        shell: bash
+        run: |
+          set -euo pipefail
+          digest="$(
+            aws ecr describe-images \
+              --repository-name "${ECR_REPOSITORY}" \
+              --image-ids "imageTag=sha-${GITHUB_SHA}" \
+              --query 'imageDetails[0].imageDigest' \
+              --output text 2>/dev/null || true
+          )"
+          if [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "found=true" >>"${GITHUB_OUTPUT}"
+            echo "digest=${digest}" >>"${GITHUB_OUTPUT}"
+          else
+            echo "found=false" >>"${GITHUB_OUTPUT}"
+          fi
+
+      - name: Log in to ECR
+        if: github.event_name == 'push' && steps.existing.outputs.found != 'true'
+        shell: bash
+        run: |
+          aws ecr get-login-password --region "${AWS_REGION}" |
+            docker login \
+              --username AWS \
+              --password-stdin \
+              "${{ steps.registry.outputs.registry }}"
+
+      - name: Set up Docker Buildx
+        if: github.event_name == 'push' && steps.existing.outputs.found != 'true'
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Build and push the release image
+        if: github.event_name == 'push' && steps.existing.outputs.found != 'true'
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: ${{ steps.registry.outputs.repository_url }}:sha-${{ github.sha }}
+
+      - name: Resolve release digest
+        id: release
+        shell: bash
+        env:
+          EXISTING_DIGEST: ${{ steps.existing.outputs.digest }}
+          BUILT_DIGEST: ${{ steps.build.outputs.digest }}
+          MANUAL_DIGEST: ${{ inputs.image_digest }}
+          MANUAL_COMMIT: ${{ inputs.commit_sha }}
+          REPOSITORY_URL: ${{ steps.registry.outputs.repository_url }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            digest="${MANUAL_DIGEST}"
+            commit="${MANUAL_COMMIT}"
+          elif [[ "${EXISTING_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            digest="${EXISTING_DIGEST}"
+            commit="${GITHUB_SHA}"
+          else
+            digest="${BUILT_DIGEST}"
+            commit="${GITHUB_SHA}"
+          fi
+
+          [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "Release digest must include sha256: followed by 64 lowercase hexadecimal characters." >&2
+            exit 1
+          }
+          [[ "${commit}" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Release commit must be a full lowercase 40-character Git SHA." >&2
+            exit 1
+          }
+
+          echo "image_uri=${REPOSITORY_URL}@${digest}" >>"${GITHUB_OUTPUT}"
+          echo "commit=${commit}" >>"${GITHUB_OUTPUT}"
+
+      - name: Deploy through Systems Manager
+        shell: bash
+        env:
+          IMAGE_URI: ${{ steps.release.outputs.image_uri }}
+          RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
+        run: |
+          set -euo pipefail
+
+          instance_ids="$(
+            aws ec2 describe-instances \
+              --filters \
+                "Name=tag:SSMTarget,Values=${SSM_TARGET_TAG}" \
+                "Name=instance-state-name,Values=running" \
+              --query 'Reservations[].Instances[].InstanceId' \
+              --output text
+          )"
+          read -r -a instances <<<"${instance_ids}"
+          if [[ "${#instances[@]}" -ne 1 ]]; then
+            echo "Expected exactly one running production instance; found ${#instances[@]}." >&2
+            exit 1
+          fi
+          instance_id="${instances[0]}"
+
+          for attempt in $(seq 1 60); do
+            ping_status="$(
+              aws ssm describe-instance-information \
+                --filters "Key=InstanceIds,Values=${instance_id}" \
+                --query 'InstanceInformationList[0].PingStatus' \
+                --output text 2>/dev/null || true
+            )"
+            [[ "${ping_status}" == "Online" ]] && break
+            sleep 5
+          done
+          [[ "${ping_status:-}" == "Online" ]] || {
+            echo "The production instance did not become available in Systems Manager." >&2
+            exit 1
+          }
+
+          previous_release="$(
+            aws ssm get-parameter \
+              --name "${CURRENT_RELEASE_PARAMETER}" \
+              --query Parameter.Value \
+              --output text 2>/dev/null || printf 'not-deployed'
+          )"
+
+          wait_for_command() {
+            local command_id="$1" status=""
+            for attempt in $(seq 1 180); do
+              status="$(
+                aws ssm get-command-invocation \
+                  --command-id "${command_id}" \
+                  --instance-id "${instance_id}" \
+                  --query Status \
+                  --output text 2>/dev/null || true
+              )"
+              case "${status}" in
+                Success)
+                  aws ssm get-command-invocation \
+                    --command-id "${command_id}" \
+                    --instance-id "${instance_id}" \
+                    --query StandardOutputContent \
+                    --output text
+                  return 0
+                  ;;
+                Cancelled|Cancelling|Failed|TimedOut)
+                  aws ssm get-command-invocation \
+                    --command-id "${command_id}" \
+                    --instance-id "${instance_id}" \
+                    --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
+                    --output json
+                  return 1
+                  ;;
+              esac
+              sleep 5
+            done
+            echo "Systems Manager deployment timed out." >&2
+            return 1
+          }
+
+          send_deploy() {
+            local image="$1" commit="$2" parameters command_id
+            parameters="$(
+              jq --compact-output --null-input \
+                --arg image "${image}" \
+                --arg commit "${commit}" \
+                '{ImageUri:[$image],CommitSha:[$commit]}'
+            )"
+            command_id="$(
+              aws ssm send-command \
+                --instance-ids "${instance_id}" \
+                --document-name "${SSM_DOCUMENT_NAME}" \
+                --parameters "${parameters}" \
+                --cloud-watch-output-config \
+                  "CloudWatchOutputEnabled=true,CloudWatchLogGroupName=${CLOUDWATCH_LOG_GROUP}" \
+                --comment "Deploy ${commit}" \
+                --query Command.CommandId \
+                --output text
+            )"
+            wait_for_command "${command_id}"
+          }
+
+          send_deploy "${IMAGE_URI}" "${RELEASE_COMMIT}"
+
+          if [[ -n "${PRODUCTION_URL}" ]]; then
+            base_url="${PRODUCTION_URL%/}"
+          else
+            public_ip="$(
+              aws ec2 describe-instances \
+                --instance-ids "${instance_id}" \
+                --query 'Reservations[0].Instances[0].PublicIpAddress' \
+                --output text
+            )"
+            base_url="http://${public_ip}"
+          fi
+
+          public_ready=false
+          for attempt in $(seq 1 24); do
+            if curl --fail --silent --show-error \
+              --max-time 10 \
+              "${base_url}/api/ready" >/dev/null; then
+              public_ready=true
+              break
+            fi
+            sleep 5
+          done
+
+          if [[ "${public_ready}" != "true" ]]; then
+            echo "The public readiness probe failed; attempting rollback." >&2
+            previous_image="${previous_release%%|*}"
+            previous_commit="${previous_release#*|}"
+            if [[ "${previous_image}" =~ @sha256:[0-9a-f]{64}$ &&
+                  "${previous_commit}" =~ ^[0-9a-f]{40}$ ]]; then
+              send_deploy "${previous_image}" "${previous_commit}" || true
+            fi
+            exit 1
+          fi
+
+          aws ssm put-parameter \
+            --name "${CURRENT_RELEASE_PARAMETER}" \
+            --type String \
+            --value "${IMAGE_URI}|${RELEASE_COMMIT}" \
+            --overwrite >/dev/null
+
+          echo "Production now runs ${IMAGE_URI} (${RELEASE_COMMIT})."

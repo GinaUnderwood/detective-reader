@@ -1,0 +1,16 @@
+[Unit]
+Description=Detective Reader containers
+Wants=network-online.target
+After=network-online.target docker.service amazon-ssm-agent.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/detective-reader-start
+RemainAfterExit=yes
+TimeoutStartSec=10min
+Restart=on-failure
+RestartSec=30s
+
+[Install]
+WantedBy=multi-user.target

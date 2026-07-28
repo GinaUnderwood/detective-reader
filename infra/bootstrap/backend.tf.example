@@ -1,0 +1,12 @@
+# After the first local bootstrap apply, copy this file to backend.tf, replace
+# the bucket placeholder with the state_bucket_name output, and run:
+# terraform init -migrate-state
+terraform {
+  backend "s3" {
+    bucket       = "REPLACE_WITH_BOOTSTRAP_STATE_BUCKET"
+    key          = "detective-reader/bootstrap/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+}

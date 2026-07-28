@@ -1,0 +1,13 @@
+.cache
+.env
+.env.*
+.git
+.github
+.pytest_cache
+.terraform
+.venv
+infra
+outputs
+tests
+*.tfplan
+*.tfstate*

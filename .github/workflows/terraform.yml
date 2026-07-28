@@ -1,0 +1,110 @@
+name: Terraform
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - "deploy/**"
+      - ".github/workflows/terraform.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/**"
+      - "deploy/**"
+      - ".github/workflows/terraform.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  validate:
+    name: Format and validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive infra
+
+      - name: Initialize bootstrap without a backend
+        run: terraform -chdir=infra/bootstrap init -backend=false
+
+      - name: Validate bootstrap
+        run: terraform -chdir=infra/bootstrap validate
+
+      - name: Initialize production without a backend
+        run: terraform -chdir=infra/production init -backend=false
+
+      - name: Validate production
+        run: terraform -chdir=infra/production validate
+
+  apply:
+    name: Apply production
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+
+    concurrency:
+      group: detective-reader-production
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      TF_VAR_aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      TF_VAR_github_repository: ${{ github.repository }}
+      TF_VAR_github_environment: production
+      TF_VAR_instance_type: ${{ vars.INSTANCE_TYPE || 't3.micro' }}
+      TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+      TF_VAR_route53_zone_id: ${{ vars.ROUTE53_ZONE_ID }}
+      TF_VAR_alarm_sns_topic_arn: ${{ vars.ALARM_SNS_TOPIC_ARN }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
+          role-session-name: detective-reader-terraform
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+
+      - name: Initialize remote state
+        run: |
+          terraform -chdir=infra/production init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="region=${AWS_REGION}"
+
+      - name: Plan
+        run: terraform -chdir=infra/production plan -out=production.tfplan
+
+      - name: Apply reviewed plan
+        run: terraform -chdir=infra/production apply -auto-approve production.tfplan
+
+      - name: Show deployment outputs
+        run: terraform -chdir=infra/production output

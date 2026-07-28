@@ -176,15 +176,25 @@ const AVATARS=[['🦉','Owl Investigator'],['🦊','Fox Detective'],['🐱','Clu
 const SHOP=[['🎩','Detective Hat',40],['🔎','Golden Magnifier',50],['📓','Secret Notebook',35],['🧥','Mystery Cape',60],['🗺️','Treasure Map',45],['🧰','Clue Kit',55],['🏠','Treehouse Office',90],['🚲','Case Cruiser',75]];
 const LESSON_SEQUENCE_VERSION=2;
 const REMOVED_LEGACY_LESSON_INDEX=3;
-const saved=JSON.parse(localStorage.getItem('detectiveReader')||'{}');
+function loadSavedState(){
+  try{
+    const value=JSON.parse(localStorage.getItem('detectiveReader')||'{}');
+    return value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+  }catch{
+    localStorage.removeItem('detectiveReader');
+    return{};
+  }
+}
+const saved=loadSavedState();
 const hasCurrentLessonSequence=saved.lessonSequenceVersion===LESSON_SEQUENCE_VERSION;
 function clampLessonIndex(value){const index=Number.isInteger(value)?value:0;return Math.min(LESSONS.length-1,Math.max(0,index))}
 function normalizeCompletedLessons(value){return[...new Set((Array.isArray(value)?value:[]).filter(Number.isInteger).filter(index=>index>=0&&index<LESSONS.length))]}
+function normalizeOwnedRewards(value){return[...new Set((Array.isArray(value)?value:[]).filter(Number.isInteger).filter(index=>index>=0&&index<SHOP.length))]}
 function migrateLegacyLessonIndex(value){const index=Number.isInteger(value)?value:0;return clampLessonIndex(index>REMOVED_LEGACY_LESSON_INDEX?index-1:index)}
 function migrateLegacyCompletedLessons(value){return normalizeCompletedLessons((Array.isArray(value)?value:[]).filter(index=>index!==REMOVED_LEGACY_LESSON_INDEX).map(index=>index>REMOVED_LEGACY_LESSON_INDEX?index-1:index))}
 const savedLesson=hasCurrentLessonSequence?clampLessonIndex(saved.lesson):migrateLegacyLessonIndex(saved.lesson);
 const savedCompleted=hasCurrentLessonSequence?normalizeCompletedLessons(saved.completed):migrateLegacyCompletedLessons(saved.completed);
-const state={view:'home',lesson:savedLesson,screen:1,coins:saved.coins??120,avatar:saved.avatar||0,owned:saved.owned||[],completed:savedCompleted,readIndex:0,buildWords:[],buildIndex:null,hunt:[],huntReady:false,mastery:0};
+const state={view:'home',lesson:savedLesson,screen:1,coins:Number.isInteger(saved.coins)&&saved.coins>=0?saved.coins:120,avatar:Number.isInteger(saved.avatar)&&saved.avatar>=0&&saved.avatar<AVATARS.length?saved.avatar:0,owned:normalizeOwnedRewards(saved.owned),completed:savedCompleted,readIndex:0,buildWords:[],buildIndex:null,hunt:[],huntReady:false,mastery:0};
 const app=document.querySelector('#app');
 
 function save(lessonIndex=state.lesson){localStorage.setItem('detectiveReader',JSON.stringify({lessonSequenceVersion:LESSON_SEQUENCE_VERSION,lesson:lessonIndex,coins:state.coins,avatar:state.avatar,owned:state.owned,completed:state.completed}))}
@@ -235,14 +245,7 @@ function chooseScreenFiveWords(){
 function prepareScreenFive(){state.buildWords=chooseScreenFiveWords();state.buildIndex=null}
 function resetScreenFive(){state.buildWords=[];state.buildIndex=null}
 function screenFiveWords(){if(!state.buildWords.length)prepareScreenFive();return state.buildWords}
-const NATURAL_FEMALE_NARRATOR_PRIORITIES=[
-  'Microsoft Jenny Online Natural','Microsoft Aria Online Natural','Microsoft AvaMultilingual Online Natural','Microsoft Ava Online Natural','Microsoft EmmaMultilingual Online Natural','Microsoft Emma Online Natural','Microsoft Michelle Online Natural',
-  'en US Jenny Multilingual Neural','en US Jenny Neural','en US Aria Neural','en US Ava Multilingual Neural','en US Ava Neural','en US Emma Neural','en US Michelle Neural','en US Phoebe Multilingual Neural','en US Nova Turbo Multilingual Neural','en US Shimmer Turbo Multilingual Neural'
-];
-const FEMALE_NARRATOR_FALLBACKS=['Microsoft Jenny','Microsoft Aria','Microsoft Ava','Microsoft Emma','Google US English','Google UK English Female','Samantha','Ava','Emma','Allison','Victoria','Karen','Moira','Tessa','Fiona','Libby','Sonia','Hazel','Susan','Serena','Kate','Veena','Joanna','Kendra','Kimberly','Ivy','Salli','Zira'];
-const FEMALE_NARRATOR_PERSONAS=['jenny','aria','avamultilingual','ava','emmamultilingual','emma','michelle','phoebe','nova','shimmer','cora','jane','sara','nancy','amber','ashley','elizabeth','samantha','allison','victoria','karen','moira','tessa','fiona','libby','sonia','hazel','susan','serena','kate','veena','joanna','kendra','kimberly','ivy','salli','zira'];
-const NATURAL_NARRATOR_QUALITY_HINTS=['natural','neural','premium','enhanced','online'];
-let narratorVoice=null,activeNarration=null,pendingNarration=null,voiceWaitTimer=null,activeNarrationTimer=null,narratorUnavailable=false;
+let activeNarration=null,narrationRequestId=0,lastNarrationErrorToast=0;
 let screenTwoRun=0,screenTwoTimer=null,screenThreeRun=0,screenThreeTimer=null,screenThreeRoot=null,screenFourRun=0,screenFourTimer=null,screenFourRoot=null;
 let screenSevenRun=0,screenSevenTimer=null,screenSevenRoot=null;
 let screenEightRun=0,screenEightTimer=null,screenEightRoot=null;
@@ -292,68 +295,71 @@ const SCREEN_TWELVE_CONFETTI_MS=SCREEN_FOUR_CONFETTI_MS;
 const SCREEN_THIRTEEN_NARRATION='You are so close to finishing the case. Last step is to complete the Mastery check. Say each word. Click below for the next word.';
 const SCREEN_THIRTEEN_CONFETTI_MS=3000;
 const SCREEN_FOURTEEN_NARRATION='Congratulations, Detective Reader! Give yourself a pat on the back! You solved the mystery reading pattern! Collect your rewards and gear up for the next case!';
-function normalizeVoiceName(value){return String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
-function compactVoiceName(value){return normalizeVoiceName(value).replace(/\s+/g,'')}
-function isNaturalNarratorVoice(voice){const name=compactVoiceName(voice?.name);return NATURAL_NARRATOR_QUALITY_HINTS.some(hint=>name.includes(hint))}
-function hasFemaleNarratorIdentity(voice){
-  const name=normalizeVoiceName(voice?.name),compact=compactVoiceName(name);
-  return name.split(' ').includes('female')||FEMALE_NARRATOR_PERSONAS.some(persona=>compact.includes(persona));
+function releaseNarration(request){
+  clearTimeout(request.watchdogTimer);
+  request.controller.abort();
+  if(request.audio){
+    request.audio.onplay=null;
+    request.audio.onended=null;
+    request.audio.onerror=null;
+    request.audio.pause();
+    request.audio.removeAttribute('src');
+    request.audio.load();
+  }
+  if(request.audioUrl)URL.revokeObjectURL(request.audioUrl);
 }
-function findPreferredNarratorVoice(voices,priorities){
-  for(const preferred of priorities){const wanted=compactVoiceName(preferred),match=voices.find(voice=>compactVoiceName(voice.name).includes(wanted));if(match)return match}
-  return null;
-}
-function chooseNarratorVoice(voices){
-  const english=voices.filter(voice=>/^en(?:[-_]|$)/i.test(voice.lang||''));
-  if(!english.length)return null;
-  const ordered=[...english.filter(voice=>/^en[-_]US$/i.test(voice.lang||'')),...english.filter(voice=>!/^en[-_]US$/i.test(voice.lang||''))];
-  const naturalFemale=ordered.filter(voice=>isNaturalNarratorVoice(voice)&&hasFemaleNarratorIdentity(voice));
-  return findPreferredNarratorVoice(naturalFemale,NATURAL_FEMALE_NARRATOR_PRIORITIES)||naturalFemale[0]||findPreferredNarratorVoice(ordered,FEMALE_NARRATOR_FALLBACKS)||ordered.find(voice=>normalizeVoiceName(voice.name).split(' ').includes('female'))||null;
-}
-function refreshNarratorVoice(){
-  const selected=chooseNarratorVoice(speechSynthesis.getVoices());
-  if(selected){narratorVoice=selected;narratorUnavailable=false}
-  if(narratorVoice&&pendingNarration){const request=pendingNarration;pendingNarration=null;speak(request.text,request.rate,request.callbacks)}
-}
-function waitForNarratorVoice(tries=20){
-  clearTimeout(voiceWaitTimer);
-  voiceWaitTimer=setTimeout(()=>{refreshNarratorVoice();if(!pendingNarration)return;if(tries>1)waitForNarratorVoice(tries-1);else{const request=pendingNarration;pendingNarration=null;narratorUnavailable=true;toast('A warm female narration voice is not available on this device.');completeWithoutNarration(request.callbacks)}},250);
-}
-function completeWithoutNarration(callbacks){
-  if(callbacks?.onStart)callbacks.onStart({unavailable:true});
-  if(callbacks?.onComplete)setTimeout(()=>callbacks.onComplete({unavailable:true}),700);
+function cancelActiveNarration(){
+  narrationRequestId++;
+  if(!activeNarration)return;
+  const request=activeNarration;
+  activeNarration=null;
+  releaseNarration(request);
 }
 function speak(text,rate=.78,callbacks={}){
-  if(!('speechSynthesis'in window)){completeWithoutNarration(callbacks);return}
-  const voices=speechSynthesis.getVoices();
-  if(!narratorVoice||!voices.some(v=>v.name===narratorVoice.name&&v.lang===narratorVoice.lang))narratorVoice=chooseNarratorVoice(voices);
-  if(!narratorVoice){
-    if(narratorUnavailable){completeWithoutNarration(callbacks);return}
-    pendingNarration={text,rate,callbacks};
-    waitForNarratorVoice();
-    return;
-  }
-  narratorUnavailable=false;
-  pendingNarration=null;
-  clearTimeout(voiceWaitTimer);
-  clearTimeout(activeNarrationTimer);
-  speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.voice=narratorVoice;
-  u.lang=narratorVoice.lang||'en-US';
-  u.rate=rate;
-  u.pitch=1;
-  u.volume=1;
-  activeNarration=u;
-  let finished=false,watchdogTimer=null;
-  u.onstart=()=>{if(finished)return;if(callbacks.onStart)callbacks.onStart({unavailable:false})};
-  u.onboundary=(event)=>{if(finished)return;if(callbacks.onBoundary)callbacks.onBoundary(event)};
-  const finish=(error=false,errorCode=null)=>{if(finished)return;finished=true;clearTimeout(watchdogTimer);if(activeNarration===u)activeNarration=null;if(callbacks.onComplete)callbacks.onComplete({error,errorCode})};
-  u.onend=()=>finish(false);
-  u.onerror=(event)=>finish(true,event?.error||null);
-  speechSynthesis.speak(u);
-  watchdogTimer=setTimeout(()=>{finish(true);speechSynthesis.cancel()},Math.max(5000,Math.min(20000,text.length*120)));
-  activeNarrationTimer=watchdogTimer;
+  cancelActiveNarration();
+  const requestId=++narrationRequestId;
+  const request={id:requestId,controller:new AbortController(),audio:null,audioUrl:null,watchdogTimer:null,finished:false};
+  activeNarration=request;
+  const finish=(error=false,errorCode=null,unavailable=false)=>{
+    if(request.finished)return;
+    request.finished=true;
+    if(activeNarration===request)activeNarration=null;
+    releaseNarration(request);
+    if(callbacks.onComplete)callbacks.onComplete({error,errorCode,unavailable});
+  };
+  fetch('/api/speech',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Detective-Reader':'1'},
+    body:JSON.stringify({text,rate}),
+    signal:request.controller.signal
+  }).then(async response=>{
+    if(!response.ok){
+      const payload=await response.json().catch(()=>({}));
+      throw new Error(payload.detail||`Speech service returned ${response.status}.`);
+    }
+    return response.blob();
+  }).then(audioBlob=>{
+    if(request.finished||activeNarration!==request)return;
+    request.audioUrl=URL.createObjectURL(audioBlob);
+    request.audio=new Audio(request.audioUrl);
+    request.audio.preload='auto';
+    request.audio.onplay=()=>{
+      if(request.finished||activeNarration!==request)return;
+      if(callbacks.onStart)callbacks.onStart({unavailable:false});
+    };
+    request.audio.onended=()=>finish(false);
+    request.audio.onerror=()=>finish(true,'audio-playback',true);
+    request.watchdogTimer=setTimeout(()=>finish(true,'audio-timeout',true),Math.max(10000,Math.min(120000,text.length*260)));
+    return request.audio.play();
+  }).catch(error=>{
+    if(error?.name==='AbortError'||request.finished||activeNarration!==request)return;
+    const now=Date.now();
+    if(now-lastNarrationErrorToast>5000){
+      lastNarrationErrorToast=now;
+      toast('Ava narration is unavailable. Select Play to try again.');
+    }
+    finish(true,error?.message||'speech-unavailable',true);
+  });
 }
 function stopNarration(){
   screenTwoRun++;
@@ -451,13 +457,8 @@ function stopNarration(){
   screenTwelveRoot=null;
   screenThirteenRoot=null;
   screenFourteenRoot=null;
-  pendingNarration=null;
-  activeNarration=null;
-  clearTimeout(voiceWaitTimer);
-  clearTimeout(activeNarrationTimer);
-  if('speechSynthesis'in window)speechSynthesis.cancel();
+  cancelActiveNarration();
 }
-if('speechSynthesis'in window){refreshNarratorVoice();speechSynthesis.addEventListener('voiceschanged',refreshNarratorVoice)}
 function toast(text){const t=document.createElement('div');t.className='toast';t.textContent=text;document.body.append(t);setTimeout(()=>t.remove(),1800)}
 function header(){return `<header class="topbar"><button class="brand" data-view="home" aria-label="Detective Reader home"><span class="glass"></span><span>Detective Reader<small>solve every word</small></span></button><div class="topstats"><span class="pill">${AVATARS[state.avatar][0]} ${AVATARS[state.avatar][1]}</span><button class="pill coin" data-view="rewards">🪙 ${state.coins}</button></div></header>`}
 function shell(content,active='home'){return `${header()}<div class="layout"><aside class="sidebar"><button class="navbtn ${active==='home'?'active':''}" data-view="home">🏠 Case Board</button><button class="navbtn ${active==='path'?'active':''}" data-view="path">🗺️ Lesson Path</button><button class="navbtn ${active==='rewards'?'active':''}" data-view="rewards">🎒 Avatar & Shop</button><button class="navbtn" data-view="progress">📈 Progress</button></aside><main class="main">${content}</main></div>`}
