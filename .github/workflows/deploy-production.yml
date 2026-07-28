@@ -89,7 +89,8 @@ jobs:
             'AZURE_SPEECH_REGION=eastus' |
             sudo tee /run/detective-reader/azure-speech.env >/dev/null
           sudo chmod 0600 /run/detective-reader/azure-speech.env
-          APP_IMAGE='example.invalid/detective-reader@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
+          sudo env \
+            APP_IMAGE='example.invalid/detective-reader@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
             AWS_REGION=us-east-1 \
             CLOUDWATCH_LOG_GROUP=/detective-reader/test \
             SITE_ADDRESS=:80 \
