@@ -30,8 +30,8 @@ resource "aws_ssm_document" "deploy" {
           timeoutSeconds = "900"
           runCommand = [
             "set -euo pipefail",
-            "cloud-init status --wait",
-            "test -x /usr/local/sbin/detective-reader-deploy",
+            "cloud-init status --wait || true",
+            "if [[ ! -x /usr/local/sbin/detective-reader-deploy ]] || [[ ! -r /etc/detective-reader/host.env ]] || [[ ! -r /opt/detective-reader/compose.yaml ]] || ! systemctl is-active --quiet docker || ! docker compose version; then cloud-init status --long || true; tail -n 200 /var/log/cloud-init-output.log || true; exit 1; fi",
             "/usr/local/sbin/detective-reader-deploy '{{ ImageUri }}' '{{ CommitSha }}'",
           ]
         }

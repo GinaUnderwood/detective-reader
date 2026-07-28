@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-dnf install -y awscli curl docker jq util-linux
+dnf install -y amazon-ssm-agent awscli-2 curl docker jq util-linux
 systemctl enable --now docker
 systemctl enable --now amazon-ssm-agent
+
+aws --version
+docker --version
+jq --version
 
 install -d -m 0755 /usr/local/lib/docker/cli-plugins
 
