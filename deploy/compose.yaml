@@ -36,7 +36,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION:?AWS_REGION is required}
         awslogs-group: ${CLOUDWATCH_LOG_GROUP:?CLOUDWATCH_LOG_GROUP is required}
-        awslogs-stream-prefix: app
+        awslogs-stream: app
 
   caddy:
     image: ${CADDY_IMAGE:-caddy:2.11.4-alpine}
@@ -68,7 +68,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION:?AWS_REGION is required}
         awslogs-group: ${CLOUDWATCH_LOG_GROUP:?CLOUDWATCH_LOG_GROUP is required}
-        awslogs-stream-prefix: caddy
+        awslogs-stream: caddy
 
 volumes:
   tts_cache:
