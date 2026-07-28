@@ -270,6 +270,12 @@ const SCREEN_EIGHT_NARRATION='Now, read these sentences.';
 const SCREEN_EIGHT_CONFETTI_MS=3000;
 const SCREEN_NINE_NARRATION='Next, read the story.';
 const SCREEN_NINE_CONFETTI_MS=3000;
+// Set below 1.0 to slow every Ava line down or above 1.0 to speed it up.
+// Examples: 0.85 is 15% slower; 1.15 is 15% faster.
+const AVA_SPEECH_SPEED_MULTIPLIER=1.0;
+const DEFAULT_AVA_SPEECH_RATE=.78;
+const MIN_AVA_SPEECH_RATE=.5;
+const MAX_AVA_SPEECH_RATE=1.2;
 const NATURAL_READ_ALOUD_RATE=.74;
 const NATURAL_HIGHLIGHT_FALLBACK_MS=465;
 const SCREEN_TEN_INSTRUCTIONS=[
@@ -315,7 +321,11 @@ function cancelActiveNarration(){
   activeNarration=null;
   releaseNarration(request);
 }
-function speak(text,rate=.78,callbacks={}){
+function adjustedAvaSpeechRate(rate,speedMultiplier=AVA_SPEECH_SPEED_MULTIPLIER){
+  const adjustedRate=rate*speedMultiplier;
+  return Math.round(Math.min(MAX_AVA_SPEECH_RATE,Math.max(MIN_AVA_SPEECH_RATE,adjustedRate))*100)/100;
+}
+function speak(text,rate=DEFAULT_AVA_SPEECH_RATE,callbacks={}){
   cancelActiveNarration();
   const requestId=++narrationRequestId;
   const request={id:requestId,controller:new AbortController(),audio:null,audioUrl:null,watchdogTimer:null,finished:false};
@@ -330,7 +340,7 @@ function speak(text,rate=.78,callbacks={}){
   fetch('/api/speech',{
     method:'POST',
     headers:{'Content-Type':'application/json','X-Detective-Reader':'1'},
-    body:JSON.stringify({text,rate}),
+    body:JSON.stringify({text,rate:adjustedAvaSpeechRate(rate)}),
     signal:request.controller.signal
   }).then(async response=>{
     if(!response.ok){

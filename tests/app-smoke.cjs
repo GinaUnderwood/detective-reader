@@ -56,4 +56,23 @@ if (!localStorage.value || localStorage.value.startsWith("{invalid")) {
   throw new Error("Invalid saved state was not recovered.");
 }
 
+if (adjustedAvaSpeechRate(0.78) !== 0.78) {
+  throw new Error("The default Ava speed multiplier changed existing pacing.");
+}
+
+if (adjustedAvaSpeechRate(0.78, 0.85) !== 0.66) {
+  throw new Error("The Ava speed multiplier did not slow narration.");
+}
+
+if (adjustedAvaSpeechRate(0.78, 1.15) !== 0.9) {
+  throw new Error("The Ava speed multiplier did not speed up narration.");
+}
+
+if (
+  adjustedAvaSpeechRate(0.5, 0.5) !== 0.5 ||
+  adjustedAvaSpeechRate(1.2, 2) !== 1.2
+) {
+  throw new Error("Adjusted Ava speech rates must remain within API bounds.");
+}
+
 console.log("Application data checks, saved-state recovery, and initial render passed.");

@@ -17,6 +17,12 @@ The browser calls a same-origin FastAPI endpoint. The Azure key remains on the
 server, generated audio is cached, request text is validated and bounded, and
 the app never silently switches to a device-dependent browser voice.
 
+To adjust every Ava line from one place, change
+`AVA_SPEECH_SPEED_MULTIPLIER` near the narration constants in `app.js`.
+`1.0` preserves the current pace, `0.85` is 15% slower, and `1.15` is 15%
+faster. Individual lesson rates remain proportional, and the final Azure rate
+is constrained to the API's supported `0.5`–`1.2` range.
+
 ## Local development
 
 Create a virtual environment and install the pinned dependencies:
