@@ -272,7 +272,7 @@ const SCREEN_NINE_NARRATION='Next, read the story.';
 const SCREEN_NINE_CONFETTI_MS=3000;
 // Set below 1.0 to slow every Ava line down or above 1.0 to speed it up.
 // Examples: 0.85 is 15% slower; 1.15 is 15% faster.
-const AVA_SPEECH_SPEED_MULTIPLIER=1.0;
+const AVA_SPEECH_SPEED_MULTIPLIER=1.25;
 const DEFAULT_AVA_SPEECH_RATE=.78;
 const MIN_AVA_SPEECH_RATE=.5;
 const MAX_AVA_SPEECH_RATE=1.2;
