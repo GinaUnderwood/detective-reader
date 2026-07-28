@@ -116,6 +116,29 @@ variable "domain_name" {
   }
 }
 
+variable "domain_aliases" {
+  description = "Additional public hostnames served by Caddy under the same automatic HTTPS configuration."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition = alltrue([
+      for alias in var.domain_aliases :
+      length(alias) <= 253 &&
+      can(regex("^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}$", alias))
+    ])
+    error_message = "Every domain_aliases entry must be a hostname without a URL scheme or path."
+  }
+
+  validation {
+    condition = (
+      length(distinct([for alias in var.domain_aliases : lower(alias)])) ==
+      length(var.domain_aliases)
+    )
+    error_message = "domain_aliases must not contain duplicate hostnames."
+  }
+}
+
 variable "route53_zone_id" {
   description = "Optional Route 53 hosted zone ID. When set with domain_name, Terraform creates the A record."
   type        = string

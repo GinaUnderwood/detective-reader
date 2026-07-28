@@ -87,7 +87,10 @@ Add these environment or repository variables from bootstrap outputs:
 | `TF_STATE_BUCKET` | `state_bucket_name` |
 
 Optional Terraform inputs are `INSTANCE_TYPE`, `DOMAIN_NAME`,
-`ROUTE53_ZONE_ID`, and `ALARM_SNS_TOPIC_ARN`.
+`DOMAIN_ALIASES`, `ROUTE53_ZONE_ID`, and `ALARM_SNS_TOPIC_ARN`.
+`DOMAIN_ALIASES` is a JSON array of additional HTTPS hostnames. This
+repository defaults it to `["www.detectivereader.com"]` in the production
+workflow.
 
 The OIDC subject is exact:
 
@@ -144,9 +147,10 @@ Keep that local JSON file out of Git and remove it securely after use.
 ## 4. DNS and first release
 
 When Route 53 is not authoritative, create an `A` record at the current DNS
-provider pointing the chosen hostname to Terraform's `public_ip`. Set
-`DOMAIN_NAME` and `PRODUCTION_URL=https://your-hostname` before the production
-apply/deploy. Caddy obtains and renews the certificate after DNS resolves.
+provider pointing the chosen hostname to Terraform's `public_ip`. Create
+equivalent records for each `DOMAIN_ALIASES` hostname. Set `DOMAIN_NAME` before
+the production apply/deploy. Caddy obtains and renews the certificates after
+DNS resolves.
 
 Every push to `main` runs CI, builds or reuses the commit's immutable ECR image,
 deploys its digest through SSM, probes the public `/api/ready`, and records the
