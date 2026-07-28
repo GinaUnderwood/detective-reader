@@ -51,10 +51,6 @@ resource "aws_instance" "app" {
     }
   }
 
-  volume_tags = {
-    Name = "${local.name}-root"
-  }
-
   tags = {
     Name      = local.name
     SSMTarget = local.name
